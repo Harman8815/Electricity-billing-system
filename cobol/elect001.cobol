@@ -94,6 +94,7 @@
            05  WS-RAND-4DIGIT      PIC 9(04)         VALUE 0.
            05  WS-RAND-DISPLAY     PIC X(04)         VALUE SPACES.
            05  WS-ID-RAND          PIC X(04).
+           05  WS-RETRY-CTR        PIC 9(02)         VALUE 0.
 
        01 WS-RAND-NUM-GEN.
           05 WS-RAND-NUM           PIC 9(08).
@@ -223,15 +224,22 @@
            MOVE IN-UNITS                 TO OUT-UNITS.
            MOVE IN-STATUS                TO OUT-STATUS.
 
+           MOVE ZEROES                   TO WS-RETRY-CTR.
+
+       2410-GENERATE-ID.
+           COMPUTE WS-RAND-SEED =
+               FUNCTION MOD(
+                  ( WS-RAND-SEED * 1103515245 + 1345 + WS-RETRY-CTR)
+                  ,2147483647 )
+
            COMPUTE WS-RAND-RESULT =
                FUNCTION MOD((WS-RAND-SEED * 1664525
                              + 1013904223), 10000)
+
            MOVE WS-RAND-RESULT     TO WS-RAND-SEED
            MOVE WS-RAND-RESULT     TO WS-RAND-4DIGIT
            MOVE WS-RAND-4DIGIT     TO WS-RAND-DISPLAY
            MOVE WS-RAND-DISPLAY    TO WS-ID-RAND.
-      *    DISPLAY WS-ID-RAND.
-      *    DISPLAY WS-RAND-RESULT.
 
            MOVE IN-FNAME(1:1)  TO WS-FN-CH.
 
@@ -257,7 +265,20 @@
 
            WRITE MO01-CUSTOMER-RECORD.
            DISPLAY '1:' ' ', WS-KSDS-STATUS
-           ADD 1 TO WS-WRITE-CTR.
+
+           IF WS-KSDS-STATUS = '22'
+              ADD 1 TO WS-RETRY-CTR
+              IF WS-RETRY-CTR <= 99
+                 DISPLAY 'DUPLICATE KEY - RETRYING WITH NEW ID'
+                 GO TO 2410-GENERATE-ID
+              ELSE
+                 DISPLAY 'MAX RETRIES EXCEEDED FOR RECORD'
+                 MOVE TI01-CUST-RECORD TO TO01-CUST-ERR-RECORD
+                 WRITE TO01-CUST-ERR-RECORD
+              END-IF
+           ELSE
+              ADD 1 TO WS-WRITE-CTR
+           END-IF.
 
        9000-TERMINATE   SECTION.
 
