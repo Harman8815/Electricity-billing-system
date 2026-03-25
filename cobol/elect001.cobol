@@ -40,10 +40,10 @@
           05 IN-STATUS      PIC X(10).
 
        FD MO01-CUST-KSDS
-           RECORD CONTAINS         146   CHARACTERS.
+           RECORD CONTAINS         151   CHARACTERS.
 
        01 MO01-CUSTOMER-RECORD.
-          05 CF-O-CUST-ID  PIC X(9).
+          05 CF-O-CUST-ID  PIC X(14).
           05 OUT-FNAME     PIC X(15).
           05 OUT-LNAME     PIC X(15).
           05 OUT-AREACODE  PIC X(7).
@@ -105,11 +105,11 @@
           05 J                     PIC 9(04) VALUE 1.
 
        01 WS-CUST-ID-GEN.
-          05 WS-FN-CH              PIC X.
-          05 WS-LN-CH              PIC X.
-          05 WS-DT-CH              PIC 99.
-          05 WS-MM-CH              PIC 99.
-          05 WS-RAND-NUM-CH        PIC 9999.
+          05 WS-FN-PREFIX        PIC X(2).
+          05 WS-LN-PREFIX        PIC X(2).
+          05 WS-AREA-PREFIX      PIC X(4).
+          05 WS-RAND-4CH         PIC X(4).
+          05 WS-DT-PREFIX        PIC X(2).
 
        01 WS-ERROR-FLAGS.
           05 WS-ERROR-RECORD-FLAG  PIC 9.
@@ -227,6 +227,10 @@
            MOVE ZEROES                   TO WS-RETRY-CTR.
 
        2410-GENERATE-ID.
+      *    ------------------------------------------------------------
+      *    Generate unique customer ID from FN(2) + LN(2) + 
+      *    AREACODE(4) + RANDOM(4) + DATE(2) = 14 chars
+      *    ------------------------------------------------------------
            COMPUTE WS-RAND-SEED =
                FUNCTION MOD(
                   ( WS-RAND-SEED * 1103515245 + 1345 + WS-RETRY-CTR)
@@ -238,30 +242,17 @@
 
            MOVE WS-RAND-RESULT     TO WS-RAND-SEED
            MOVE WS-RAND-RESULT     TO WS-RAND-4DIGIT
-           MOVE WS-RAND-4DIGIT     TO WS-RAND-DISPLAY
-           MOVE WS-RAND-DISPLAY    TO WS-ID-RAND.
+           MOVE WS-RAND-DISPLAY    TO WS-RAND-4CH.
 
-           MOVE IN-FNAME(1:1)  TO WS-FN-CH.
+      *    Build 14-byte customer ID
+           MOVE IN-FNAME(1:2)    TO WS-FN-PREFIX.
+           MOVE IN-LNAME(1:2)    TO WS-LN-PREFIX.
+           MOVE IN-AREACODE(1:4) TO WS-AREA-PREFIX.
+           MOVE WS-DD              TO WS-DT-PREFIX.
+           
+           MOVE WS-CUST-ID-GEN     TO CF-O-CUST-ID.
 
-           MOVE 1 TO I.
-           MOVE ZEROES TO WS-PTR
-           PERFORM VARYING I FROM 1 BY 1 UNTIL I > 20
-
-               IF IN-FNAME(I:1) IS EQUAL TO SPACES
-                           AND WS-PTR IS EQUAL TO ZEROES
-                           MOVE I TO WS-PTR
-               END-IF
-           END-PERFORM.
-
-           ADD 1 TO WS-PTR.
-           MOVE IN-FNAME(WS-PTR:1) TO WS-LN-CH(1:1).
-
-           MOVE WS-DD                    TO WS-DT-CH.
-           MOVE WS-MM                    TO WS-MM-CH.
-           MOVE WS-ID-RAND               TO WS-RAND-NUM-CH.
-           MOVE WS-CUST-ID-GEN           TO CF-O-CUST-ID.
-
-           DISPLAY 'CUSTOMER ID IS',  ' ', WS-CUST-ID-GEN.
+           DISPLAY 'CUSTOMER ID IS',  ' ', CF-O-CUST-ID.
 
            WRITE MO01-CUSTOMER-RECORD.
            DISPLAY '1:' ' ', WS-KSDS-STATUS
