@@ -108,17 +108,17 @@
                INCLUDE SQLCA
            END-EXEC.
 
-      * HOST VARIABLES FOR DB2 CUSTOMER TABLE
+      * HOST VARIABLES FOR DB2 CUSTOMER TABLE (146 bytes)
        01 HV-CUSTOMER-RECORD.
-          05 HV-CUST-ID            PIC X(12).
-          05 HV-CUST-FNAME         PIC X(15).
-          05 HV-CUST-LNAME         PIC X(15).
-          05 HV-CUST-AREACODE      PIC X(7).
-          05 HV-CUST-ADDRESS1      PIC X(30).
-          05 HV-CUST-LOCALITY      PIC X(30).
-          05 HV-CUST-CITY          PIC X(20).
-          05 HV-CUST-UNITS         PIC X(10).
-          05 HV-CUST-STATUS        PIC X(10).
+          05 HV-CUST-ID            PIC X(14).
+          05 HV-FIRST-NAME         PIC X(15).
+          05 HV-LAST-NAME          PIC X(15).
+          05 HV-AREACODE           PIC X(7).
+          05 HV-ADDRESS1           PIC X(30).
+          05 HV-ADDRESS2           PIC X(30).
+          05 HV-CITY               PIC X(20).
+          05 HV-UNITS              PIC X(10).
+          05 HV-STATUS             PIC X(10).
 
        01 HV-DBNAME               PIC X(8) VALUE 'ELECTDB'.
 
@@ -224,14 +224,14 @@
       *    ------------------------------------------------------------
       *    INSERT CUSTOMER INTO DB2 CUSTOMER TABLE
       *    ------------------------------------------------------------
-           MOVE IN-FNAME                 TO HV-CUST-FNAME.
-           MOVE IN-LNAME                 TO HV-CUST-LNAME.
-           MOVE IN-AREACODE              TO HV-CUST-AREACODE.
-           MOVE IN-ADDRESS1              TO HV-CUST-ADDRESS1.
-           MOVE IN-LOCALITY              TO HV-CUST-LOCALITY.
-           MOVE IN-CITY                  TO HV-CUST-CITY.
-           MOVE IN-UNITS                 TO HV-CUST-UNITS.
-           MOVE IN-STATUS                TO HV-CUST-STATUS.
+           MOVE IN-FNAME                 TO HV-FIRST-NAME.
+           MOVE IN-LNAME                 TO HV-LAST-NAME.
+           MOVE IN-AREACODE              TO HV-AREACODE.
+           MOVE IN-ADDRESS1              TO HV-ADDRESS1.
+           MOVE IN-LOCALITY              TO HV-ADDRESS2.
+           MOVE IN-CITY                  TO HV-CITY.
+           MOVE IN-UNITS                 TO HV-UNITS.
+           MOVE IN-STATUS                TO HV-STATUS.
 
            MOVE ZEROES                   TO WS-RETRY-CTR.
 
@@ -268,14 +268,14 @@
       *    INSERT INTO DB2 CUSTOMER TABLE
            EXEC SQL
                INSERT INTO CUSTOMER
-               (CUST_ID, CUST_FNAME, CUST_LNAME, CUST_AREACODE,
-                CUST_ADDRESS1, CUST_LOCALITY, CUST_CITY,
-                CUST_UNITS, CUST_STATUS)
+               (CUST_ID, FIRST_NAME, LAST_NAME, AREA_CODE,
+                ADDRESS_LINE_1, ADDRESS_LINE_2, CITY,
+                TOTAL_UNITS_CONSUMED, STATUS)
                VALUES
-               (:HV-CUST-ID, :HV-CUST-FNAME, :HV-CUST-LNAME,
-                :HV-CUST-AREACODE, :HV-CUST-ADDRESS1,
-                :HV-CUST-LOCALITY, :HV-CUST-CITY,
-                :HV-CUST-UNITS, :HV-CUST-STATUS)
+               (:HV-CUST-ID, :HV-FIRST-NAME, :HV-LAST-NAME,
+                :HV-AREACODE, :HV-ADDRESS1,
+                :HV-ADDRESS2, :HV-CITY,
+                :HV-UNITS, :HV-STATUS)
            END-EXEC.
 
            EVALUATE SQLCODE

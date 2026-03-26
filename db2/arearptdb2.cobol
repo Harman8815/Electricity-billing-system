@@ -118,7 +118,7 @@
        01 WS-DETAIL-LINE.
           05 WS-D-AREACODE         PIC X(7).
           05 FILLER                PIC X(4) VALUE SPACES.
-          05 WS-D-CUSTID           PIC X(12).
+          05 WS-D-CUSTID           PIC X(14).
           05 FILLER                PIC X(2) VALUE SPACES.
           05 WS-D-CUSTNAME         PIC X(20).
           05 FILLER                PIC X(2) VALUE SPACES.
@@ -157,11 +157,11 @@
       * DB2 CUSTOMER TABLE CURSOR - FETCH ALL CUSTOMERS BY AREACODE
            EXEC SQL
                DECLARE CUST_CURSOR CURSOR FOR
-               SELECT CUST_ID, CUST_FNAME, CUST_LNAME,
-                      CUST_AREACODE, CUST_ADDRESS1, CUST_LOCALITY,
-                      CUST_CITY, CUST_UNITS, CUST_STATUS
+               SELECT CUST_ID, FIRST_NAME, LAST_NAME,
+                      AREA_CODE, ADDRESS_LINE_1, ADDRESS_LINE_2,
+                      CITY, TOTAL_UNITS_CONSUMED, STATUS
                FROM CUSTOMER
-               ORDER BY CUST_AREACODE, CUST_ID
+               ORDER BY AREA_CODE, CUST_ID
            END-EXEC.
 
       * DB2 METER TABLE SELECT - FETCH METER BY METER_ID
@@ -176,20 +176,20 @@
 
       * HOST VARIABLES FOR DB2
        01 HV-CUSTOMER-RECORD.
-          05 HV-CUST-ID            PIC X(12).
-          05 HV-CUST-FNAME         PIC X(15).
-          05 HV-CUST-LNAME         PIC X(15).
-          05 HV-CUST-AREACODE      PIC X(7).
-          05 HV-CUST-ADDRESS1      PIC X(30).
-          05 HV-CUST-LOCALITY      PIC X(30).
-          05 HV-CUST-CITY          PIC X(20).
-          05 HV-CUST-UNITS         PIC X(10).
-          05 HV-CUST-STATUS        PIC X(10).
+          05 HV-CUST-ID            PIC X(14).
+          05 HV-FIRST-NAME         PIC X(15).
+          05 HV-LAST-NAME          PIC X(15).
+          05 HV-AREACODE           PIC X(7).
+          05 HV-ADDRESS1           PIC X(30).
+          05 HV-ADDRESS2           PIC X(30).
+          05 HV-CITY               PIC X(20).
+          05 HV-UNITS              PIC X(10).
+          05 HV-STATUS             PIC X(10).
 
        01 HV-METER-RECORD.
           05 HV-METER-ID           PIC X(14).
-          05 HV-METER-CUST-ID      PIC X(12).
-          05 HV-METER-INSTALL-DT   PIC X(10).
+          05 HV-METER-CUST-ID      PIC X(14).
+          05 HV-METER-INSTALL-DT   PIC X(12).
           05 HV-METER-STATUS       PIC X(1).
 
        01 HV-SQL-STATUS.
@@ -264,14 +264,14 @@
            PERFORM UNTIL SQLCODE = 100
 
                IF WS-FIRST-RECORD = 'Y'
-                  MOVE HV-CUST-AREACODE TO WS-CURR-AREACODE
+                  MOVE HV-AREACODE TO WS-CURR-AREACODE
                   MOVE 'N' TO WS-FIRST-RECORD
                   PERFORM 3000-PRINT-HEADERS
                END-IF
 
-               IF HV-CUST-AREACODE NOT = WS-CURR-AREACODE
+               IF HV-AREACODE NOT = WS-CURR-AREACODE
                   PERFORM 4000-PRINT-AREA-TOTAL
-                  MOVE HV-CUST-AREACODE TO WS-CURR-AREACODE
+                  MOVE HV-AREACODE TO WS-CURR-AREACODE
                   PERFORM 3000-PRINT-HEADERS
                END-IF
 
@@ -294,14 +294,14 @@
            EXEC SQL
                FETCH CUST_CURSOR
                INTO :HV-CUST-ID,
-                    :HV-CUST-FNAME,
-                    :HV-CUST-LNAME,
-                    :HV-CUST-AREACODE,
-                    :HV-CUST-ADDRESS1,
-                    :HV-CUST-LOCALITY,
-                    :HV-CUST-CITY,
-                    :HV-CUST-UNITS,
-                    :HV-CUST-STATUS
+                    :HV-FIRST-NAME,
+                    :HV-LAST-NAME,
+                    :HV-AREACODE,
+                    :HV-ADDRESS1,
+                    :HV-ADDRESS2,
+                    :HV-CITY,
+                    :HV-UNITS,
+                    :HV-STATUS
            END-EXEC.
 
            IF SQLCODE = 0
@@ -315,14 +315,14 @@
       *    FETCH METER FROM DB2 METER TABLE USING CUSTOMER ID
       *    ------------------------------------------------------------
            EXEC SQL
-               SELECT METER_ID, METER_CUST_ID,
-                      METER_INSTALL_DT, METER_STATUS
+               SELECT METER_ID, CUST_ID,
+                      INSTALL_DATE, STATUS
                INTO :HV-METER-ID,
                     :HV-METER-CUST-ID,
                     :HV-METER-INSTALL-DT,
                     :HV-METER-STATUS
                FROM METER
-               WHERE METER_CUST_ID = :HV-CUST-ID
+               WHERE CUST_ID = :HV-CUST-ID
            END-EXEC.
 
            EVALUATE SQLCODE
@@ -402,12 +402,12 @@
               PERFORM 3000-PRINT-HEADERS
            END-IF.
 
-           MOVE HV-CUST-AREACODE TO WS-D-AREACODE.
+           MOVE HV-AREACODE TO WS-D-AREACODE.
            MOVE HV-CUST-ID TO WS-D-CUSTID.
 
-           STRING HV-CUST-FNAME DELIMITED BY SPACE
+           STRING HV-FIRST-NAME DELIMITED BY SPACE
                   ' ' DELIMITED BY SIZE
-                  HV-CUST-LNAME DELIMITED BY SPACE
+                  HV-LAST-NAME DELIMITED BY SPACE
                   INTO WS-D-CUSTNAME
            END-STRING.
 

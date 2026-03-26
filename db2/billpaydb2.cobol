@@ -113,7 +113,7 @@
        01 WS-DETAIL-LINE.
           05 WS-D-BILLID           PIC X(14).
           05 FILLER                PIC X(2) VALUE SPACES.
-          05 WS-D-CUSTID           PIC X(12).
+          05 WS-D-CUSTID           PIC X(14).
           05 FILLER                PIC X(3) VALUE SPACES.
           05 WS-D-BILL-AMT         PIC $$,$$$,$$9.99.
           05 FILLER                PIC X(3) VALUE SPACES.
@@ -156,9 +156,8 @@
       * DB2 BILL TABLE CURSOR - FETCH ALL BILLS
            EXEC SQL
                DECLARE BILL_CURSOR CURSOR FOR
-               SELECT BILL_ID, BILL_CUST_ID, BILL_CUST_NAME,
-                      BILL_METER_ID, BILL_READ_DATE, BILL_UNITS,
-                      BILL_AMOUNT, BILL_STATUS
+               SELECT BILL_ID, CUST_ID, FIRST_NAME, LAST_NAME,
+                      UNITS, AMOUNT, STATUS
                FROM BILL
                ORDER BY BILL_ID
            END-EXEC.
@@ -168,29 +167,27 @@
                INCLUDE SQLCA
            END-EXEC.
 
-      * HOST VARIABLES FOR DB2 BILL TABLE
+      * HOST VARIABLES FOR DB2 BILL TABLE (112 bytes)
        01 HV-BILL-RECORD.
           05 HV-BILL-ID            PIC X(14).
-          05 HV-BILL-CUST-ID       PIC X(12).
-          05 HV-BILL-CUST-NAME     PIC X(30).
-          05 HV-BILL-METER-ID      PIC X(14).
-          05 HV-BILL-READ-DATE     PIC X(10).
-          05 HV-BILL-UNITS         PIC 9(7)V99.
-          05 HV-BILL-AMOUNT        PIC 9(9)V99.
-          05 HV-BILL-STATUS        PIC X(2).
+          05 HV-BILL-CUST-ID       PIC X(14).
+          05 HV-BILL-FIRST-NAME    PIC X(15).
+          05 HV-BILL-LAST-NAME     PIC X(15).
+          05 HV-BILL-UNITS         PIC 9(10).
+          05 HV-BILL-AMOUNT        PIC 9(10).
+          05 HV-BILL-STATUS        PIC X(4).
 
-      * HOST VARIABLES FOR DB2 BILL_UPDATE TABLE
+      * HOST VARIABLES FOR DB2 BILL_UPDATE TABLE (121 bytes)
        01 HV-BILL-UPD-RECORD.
           05 HV-UPD-BILL-ID        PIC X(14).
-          05 HV-UPD-CUST-ID        PIC X(12).
-          05 HV-UPD-CUST-NAME      PIC X(30).
-          05 HV-UPD-METER-ID       PIC X(14).
-          05 HV-UPD-READ-DATE      PIC X(10).
-          05 HV-UPD-UNITS          PIC 9(7)V99.
-          05 HV-UPD-AMOUNT         PIC 9(9)V99.
-          05 HV-UPD-PAID           PIC 9(9)V99.
-          05 HV-UPD-BALANCE        PIC 9(9)V99.
-          05 HV-UPD-STATUS         PIC X(2).
+          05 HV-UPD-CUST-ID        PIC X(14).
+          05 HV-UPD-FIRST-NAME     PIC X(15).
+          05 HV-UPD-LAST-NAME      PIC X(15).
+          05 HV-UPD-UNITS          PIC 9(10).
+          05 HV-UPD-AMOUNT         PIC 9(10).
+          05 HV-UPD-PAID           PIC 9(10).
+          05 HV-UPD-BALANCE        PIC 9(10).
+          05 HV-UPD-STATUS         PIC X(4).
 
        01 HV-DBNAME               PIC X(8) VALUE 'ELECTDB'.
 
@@ -294,9 +291,8 @@
                FETCH BILL_CURSOR
                INTO :HV-BILL-ID,
                     :HV-BILL-CUST-ID,
-                    :HV-BILL-CUST-NAME,
-                    :HV-BILL-METER-ID,
-                    :HV-BILL-READ-DATE,
+                    :HV-BILL-FIRST-NAME,
+                    :HV-BILL-LAST-NAME,
                     :HV-BILL-UNITS,
                     :HV-BILL-AMOUNT,
                     :HV-BILL-STATUS
@@ -334,9 +330,8 @@
       *    ------------------------------------------------------------
            MOVE HV-BILL-ID TO HV-UPD-BILL-ID
            MOVE HV-BILL-CUST-ID TO HV-UPD-CUST-ID
-           MOVE HV-BILL-CUST-NAME TO HV-UPD-CUST-NAME
-           MOVE HV-BILL-METER-ID TO HV-UPD-METER-ID
-           MOVE HV-BILL-READ-DATE TO HV-UPD-READ-DATE
+           MOVE HV-BILL-FIRST-NAME TO HV-UPD-FIRST-NAME
+           MOVE HV-BILL-LAST-NAME TO HV-UPD-LAST-NAME
            MOVE HV-BILL-UNITS TO HV-UPD-UNITS
            MOVE HV-BILL-AMOUNT TO HV-UPD-AMOUNT
            MOVE WS-TOTAL-PAID TO HV-UPD-PAID
@@ -344,13 +339,13 @@
 
            EXEC SQL
                INSERT INTO BILL_UPDATE
-               (BILL_ID, CUST_ID, CUST_NAME, METER_ID,
-                READ_DATE, UNITS, AMOUNT, PAID, BALANCE, STATUS)
+               (BILL_ID, CUST_ID, FIRST_NAME, LAST_NAME,
+                UNITS, AMOUNT, PAID, BALANCE, STATUS)
                VALUES
-               (:HV-UPD-BILL-ID, :HV-UPD-CUST-ID, :HV-UPD-CUST-NAME,
-                :HV-UPD-METER-ID, :HV-UPD-READ-DATE, :HV-UPD-UNITS,
-                :HV-UPD-AMOUNT, :HV-UPD-PAID, :HV-UPD-BALANCE,
-                :HV-UPD-STATUS)
+               (:HV-UPD-BILL-ID, :HV-UPD-CUST-ID,
+                :HV-UPD-FIRST-NAME, :HV-UPD-LAST-NAME,
+                :HV-UPD-UNITS, :HV-UPD-AMOUNT, :HV-UPD-PAID,
+                :HV-UPD-BALANCE, :HV-UPD-STATUS)
            END-EXEC.
 
            IF SQLCODE NOT = 0

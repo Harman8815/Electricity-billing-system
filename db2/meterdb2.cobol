@@ -115,11 +115,11 @@
                INCLUDE SQLCA
            END-EXEC.
 
-      * HOST VARIABLES FOR DB2 METER TABLE
+      * HOST VARIABLES FOR DB2 METER TABLE (41 bytes)
        01 HV-METER-RECORD.
           05 HV-METER-ID           PIC X(14).
-          05 HV-METER-CUST-ID      PIC X(12) VALUE SPACES.
-          05 HV-METER-INSTALL-DT   PIC X(10).
+          05 HV-METER-CUST-ID      PIC X(14) VALUE SPACES.
+          05 HV-METER-INSTALL-DT   PIC X(12).
           05 HV-METER-STATUS       PIC X(1).
 
        01 HV-DBNAME               PIC X(8) VALUE 'ELECTDB'.
@@ -273,7 +273,7 @@
       *    INSERT INTO DB2 METER TABLE
            EXEC SQL
                INSERT INTO METER
-               (METER_ID, METER_CUST_ID, METER_INSTALL_DT, METER_STATUS)
+               (METER_ID, CUST_ID, INSTALL_DATE, STATUS)
                VALUES
                (:HV-METER-ID, :HV-METER-CUST-ID,
                 :HV-METER-INSTALL-DT, :HV-METER-STATUS)
