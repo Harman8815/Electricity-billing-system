@@ -192,6 +192,8 @@
           05 HV-METER-INSTALL-DT   PIC X(12).
           05 HV-METER-STATUS       PIC X(1).
 
+       01 HV-DBNAME               PIC X(8) VALUE 'ELECTDB'.
+
        01 HV-SQL-STATUS.
           05 SQL-CODE-VAL          PIC S9(9) COMP.
           05 SQL-CODE-DISPLAY      PIC -999.

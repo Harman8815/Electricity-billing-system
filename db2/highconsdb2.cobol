@@ -63,7 +63,7 @@
 
        01 WS-TOP5-TABLE.
           05 WS-TOP5-ENTRY OCCURS 5 TIMES INDEXED BY WS-IDX.
-             10 WS-TOP5-CUST-ID    PIC X(12).
+             10 WS-TOP5-CUST-ID    PIC X(14).
              10 WS-TOP5-CUST-NAME  PIC X(30).
              10 WS-TOP5-AREACODE   PIC X(7).
              10 WS-TOP5-METER-ID   PIC X(14).
@@ -71,7 +71,7 @@
              10 WS-TOP5-BILL-AMT   PIC 9(09)V99.
 
        01 WS-CURRENT-RECORD.
-          05 WS-CURR-CUST-ID      PIC X(12).
+          05 WS-CURR-CUST-ID      PIC X(14).
           05 WS-CURR-CUST-NAME    PIC X(30).
           05 WS-CURR-AREACODE     PIC X(7).
           05 WS-CURR-METER-ID     PIC X(14).
