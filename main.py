@@ -1,9 +1,22 @@
 import random
 import csv
+import os
 
 FIRST_NAMES = ["01","02","03","04","05","06","07","08","09","10"]
 LAST_NAMES = ["01","02","03","04","05","06","07","08","09","10"]
 CITIES = ["01","02","03","04","05","06","07","08","09","10"]
+
+def ensure_data_folder():
+    if not os.path.exists("data"):
+        os.makedirs("data")
+
+def clear_old_files():
+    files = ["master.csv", "customer.dat", "meter.dat", "bill.dat"]
+    for f in files:
+        path = os.path.join("data", f)
+        if os.path.exists(path):
+            os.remove(path)
+            print(f"Deleted old file: {path}")
 
 def generate_master_data(n):
     data = []
@@ -28,7 +41,7 @@ def generate_master_data(n):
     return data
 
 def write_master_csv(data):
-    with open("master.csv", "w", newline="") as f:
+    with open("data/master.csv", "w", newline="") as f:
         writer = csv.writer(f)
         writer.writerow([
             "first_name",
@@ -45,7 +58,7 @@ def pad(value, length):
     return str(value).ljust(length)[:length]
 
 def create_customer_file(data):
-    with open("dataset/customer.dat", "w") as f:
+    with open("data/customer.dat", "w") as f:
         for row in data:
             first, last, area, address, city, prev, curr = row
             units = curr - prev
@@ -61,7 +74,7 @@ def create_customer_file(data):
             f.write(record + "\n")
 
 def create_meter_file(data):
-    with open("dataset/meter.dat", "w") as f:
+    with open("data/meter.dat", "w") as f:
         for row in data:
             _, _, _, _, _, prev, curr = row
 
@@ -72,7 +85,7 @@ def create_meter_file(data):
             f.write(record + "\n")
 
 def create_bill_file(data, rate=5):
-    with open("dataset/bill.dat", "w") as f:
+    with open("data/bill.dat", "w") as f:
         for row in data:
             first, last, _, _, _, prev, curr = row
             units = curr - prev
@@ -88,13 +101,17 @@ def create_bill_file(data, rate=5):
 
 def main():
     n = 100
+    
+    ensure_data_folder()
+    clear_old_files()
+    
     data = generate_master_data(n)
 
     write_master_csv(data)
     create_customer_file(data)
     create_meter_file(data)
     create_bill_file(data)
-    print("Files generated in dataset/ folder with digits only format")
+    print("Files generated in data/ folder with digits only format")
 
 if __name__ == "__main__":
     main()
