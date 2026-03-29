@@ -44,7 +44,7 @@
 
        01 MI01-CUSTOMER-RECORD.
           05 CUST-KEY         PIC X(12).
-          05 CUST-FILLER      PIC X(68).
+          05 CUST-FILLER      PIC X(71).
 
        FD MO01-METER-KSDS
            RECORD CONTAINS         38  CHARACTERS.
@@ -243,6 +243,12 @@
            END-IF.
 
        2400-WRITE-METER-KSDS SECTION.
+
+           MOVE CUST-KEY(2:1)          TO WS-MTR-CUST-CH1.
+           MOVE CUST-KEY(3:1)          TO WS-MTR-CUST-CH2.
+           MOVE WS-DD                  TO WS-MTR-DD.
+           MOVE WS-MM                  TO WS-MTR-MM.
+           COMPUTE WS-MTR-RAND = FUNCTION RANDOM * 10000.
 
            STRING WS-MTR-PREFIX WS-MTR-CUST-CH1 WS-MTR-CUST-CH2
                   WS-MTR-DD WS-MTR-MM WS-MTR-RAND
