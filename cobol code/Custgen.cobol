@@ -40,10 +40,10 @@
           05 IN-UNITS         PIC X(5).
 
        FD MO01-CUSTOMER-KSDS
-           RECORD CONTAINS         80  CHARACTERS.
+           RECORD CONTAINS         83  CHARACTERS.
 
        01 MO01-CUSTOMER-RECORD.
-          05 CUST-ID          PIC X(9).
+          05 CUST-ID          PIC X(12).
           05 OUT-FIRST-NAME   PIC X(10).
           05 OUT-LAST-NAME    PIC X(10).
           05 OUT-AREA-CODE    PIC X(6).
@@ -95,9 +95,11 @@
            05  WS-RETRY-CTR        PIC 9(02)         VALUE 0.
 
        01 WS-CUST-ID-GEN.
-          05 WS-CUST-PREFIX        PIC X(3) VALUE 'C'.
-          05 WS-CUST-AREA          PIC X(6).
-          05 WS-CUST-RAND          PIC 9(4).
+          05 WS-CUST-PREFIX        PIC X VALUE 'C'.
+          05 WS-CUST-FN-CHARS      PIC X(2).
+          05 WS-CUST-LN-CHARS      PIC X(2).
+          05 WS-CUST-AREA-4        PIC 9(4).
+          05 WS-CUST-RAND-3        PIC 9(3).
 
        01 WS-ERROR-FLAGS.
           05 WS-ERROR-RECORD-FLAG  PIC 9.
@@ -209,39 +211,15 @@
            MOVE IN-ADDRESS           TO OUT-ADDRESS.
            MOVE IN-CITY              TO OUT-CITY.
            MOVE IN-UNITS             TO OUT-UNITS.
-           MOVE 0                    TO WS-RETRY-CTR.
-           MOVE 99                   TO WS-KSDS-STATUS.
 
-           PERFORM 2410-GENERATE-UNIQUE-CUST-ID
-               UNTIL WS-KSDS-STATUS = '00' OR WS-RETRY-CTR > 100.
+           MOVE IN-FIRST-NAME(1:2)   TO WS-CUST-FN-CHARS.
+           MOVE IN-LAST-NAME(1:2)    TO WS-CUST-LN-CHARS.
+           MOVE IN-AREA-CODE(1:4)    TO WS-CUST-AREA-4.
+           COMPUTE WS-RAND-SEED = FUNCTION RANDOM * 1000.
+           COMPUTE WS-CUST-RAND-3 = FUNCTION MOD(WS-RAND-SEED, 1000).
 
-           IF WS-KSDS-STATUS = '00'
-              ADD 1 TO WS-WRITE-CTR
-              DISPLAY 'CUSTOMER ID WRITTEN: ' CUST-ID
-           ELSE
-              ADD 1 TO WS-ERROR-CTR
-              DISPLAY 'ERROR: UNABLE TO WRITE RECORD FOR CUSTOMER'
-              DISPLAY 'MAX RETRIES EXCEEDED FOR THIS RECORD'
-           END-IF.
-
-       2410-GENERATE-UNIQUE-CUST-ID SECTION.
-
-           COMPUTE WS-RAND-SEED =
-              FUNCTION MOD(
-                 ( WS-RAND-SEED * 1103515245 + 12345 + WS-RETRY-CTR),
-                 2147483647 ).
-
-           COMPUTE WS-RAND-RESULT =
-               FUNCTION MOD((WS-RAND-SEED * 1664525
-                             + 1013904223), 1000000).
-           MOVE WS-RAND-RESULT     TO WS-RAND-4DIGIT
-           MOVE WS-RAND-4DIGIT     TO WS-RAND-DISPLAY
-           MOVE WS-RAND-DISPLAY    TO WS-ID-RAND.
-
-           MOVE IN-AREA-CODE       TO WS-CUST-AREA.
-           MOVE WS-ID-RAND         TO WS-CUST-RAND.
-
-           STRING WS-CUST-PREFIX WS-CUST-AREA WS-CUST-RAND
+           STRING WS-CUST-PREFIX WS-CUST-FN-CHARS WS-CUST-LN-CHARS
+                  WS-CUST-AREA-4 WS-CUST-RAND-3
                   DELIMITED BY SIZE
                   INTO CUST-ID
            END-STRING.
@@ -260,6 +238,7 @@
                    END-IF
                NOT INVALID KEY
                    MOVE '00' TO WS-KSDS-STATUS
+                   ADD 1 TO WS-WRITE-CTR
            END-WRITE.
 
        9000-TERMINATE   SECTION.

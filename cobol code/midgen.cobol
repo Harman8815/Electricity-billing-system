@@ -33,34 +33,34 @@
        FILE SECTION.
 
        FD TI01-METER-FILE
-           RECORD CONTAINS         8  CHARACTERS.
+           RECORD CONTAINS         12  CHARACTERS.
 
        01 TI01-METER-RECORD.
-          05 IN-PREV-READ     PIC X(4).
-          05 IN-CURR-READ     PIC X(4).
+          05 IN-PREV-READ     PIC X(6).
+          05 IN-CURR-READ     PIC X(6).
 
        FD MI01-CUSTOMER-KSDS
-           RECORD CONTAINS         24  CHARACTERS.
+           RECORD CONTAINS         83  CHARACTERS.
 
        01 MI01-CUSTOMER-RECORD.
-          05 CUST-KEY         PIC X(9).
-          05 CUST-FILLER      PIC X(15).
+          05 CUST-KEY         PIC X(12).
+          05 CUST-FILLER      PIC X(68).
 
        FD MO01-METER-KSDS
-           RECORD CONTAINS         21  CHARACTERS.
+           RECORD CONTAINS         24  CHARACTERS.
 
        01 MO01-METER-RECORD.
-          05 MTR-CUST-ID      PIC X(9).
+          05 MTR-CUST-ID      PIC X(12).
           05 MTR-PREV-READ    PIC 9(06).
           05 MTR-CURR-READ    PIC 9(06).
 
        FD TO01-METER-ERR
            RECORDING MODE          IS F
-           RECORD CONTAINS         8 CHARACTERS.
+           RECORD CONTAINS         12 CHARACTERS.
 
        01 TO01-METER-ERR-RECORD.
-          05 ERR-PREV-READ    PIC X(4).
-          05 ERR-CURR-READ    PIC X(4).
+          05 ERR-PREV-READ    PIC X(6).
+          05 ERR-CURR-READ    PIC X(6).
 
        WORKING-STORAGE SECTION.
 
@@ -98,10 +98,6 @@
           05 WS-PREV-READING     PIC 9(08) VALUE 0.
           05 WS-CURR-READING     PIC 9(08) VALUE 0.
 
-       01 WS-SUBS.
-          05 I                     PIC 9(04) VALUE 1.
-          05 WS-RETRY-CTR          PIC 9(02) VALUE 0.
-
        01 WS-METER-ID-GEN.
           05 WS-MTR-PREFIX         PIC X(4) VALUE 'MTR-'.
           05 WS-MTR-CUST-CH1       PIC X.
@@ -110,7 +106,7 @@
           05 WS-MTR-MM             PIC 99.
           05 WS-MTR-RAND           PIC 9999.
 
-       01 WS-HARDCODED-CUST-ID    PIC X(9).
+       01 WS-HARDCODED-CUST-ID    PIC X(12).
 
        01 WS-ERROR-FLAGS.
           05 WS-ERROR-RECORD-FLAG  PIC 9.
@@ -226,14 +222,16 @@
            SET VALID-RECORD-FLAG       TO TRUE.
 
            IF IN-PREV-READ IS EQUAL TO SPACES
-              DISPLAY 'METER PREVIOUS READ ERROR - PREV_READ REQUIRED FOR METER'
+              DISPLAY 'METER PREV READ ERROR - PREV_READ REQUIRED'  
+                      ' FOR METER'
               SET ERROR-RECORD-FLAG         TO TRUE
               MOVE TI01-METER-RECORD     TO TO01-METER-ERR-RECORD
               WRITE TO01-METER-ERR-RECORD
            END-IF.
 
            IF IN-CURR-READ IS EQUAL TO SPACES
-              DISPLAY 'METER CURRENT READ ERROR - CURR_READ REQUIRED FOR METER'
+              DISPLAY 'METER CURR READ ERROR - CURR_READ REQUIRED'
+                      ' FOR METER'
               SET ERROR-RECORD-FLAG         TO TRUE
               MOVE TI01-METER-RECORD     TO TO01-METER-ERR-RECORD
               WRITE TO01-METER-ERR-RECORD
