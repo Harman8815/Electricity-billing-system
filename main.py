@@ -6,6 +6,19 @@ FIRST_NAMES = ["Aman","Riya","Karan","Neha","Rahul","Priya","Arjun","Sneha","Vik
 LAST_NAMES = ["Sharma","Verma","Patel","Singh","Gupta","Nair","Reddy","Iyer","Yadav","Das"]
 CITIES = ["Indore","Bangalore","Ahmedabad","Delhi","Lucknow","Kochi","Hyderabad","Chennai","Patna","Kolkata"]
 
+ADDRESSES = [
+    "123 MG Road, Sector 7",
+    "456 Park Avenue, Block 3", 
+    "789 Lake View Apartments",
+    "321 Palm Street, Flat 102",
+    "654 Green Valley Colony",
+    "987 River Side Road",
+    "147 Hill Top Residency",
+    "258 Sunshine Enclave",
+    "369 Garden View Layout",
+    "753 City Center Plaza"
+]
+
 def ensure_data_folder():
     if not os.path.exists("data"):
         os.makedirs("data")
@@ -25,7 +38,7 @@ def generate_master_data(n):
         last = random.choice(LAST_NAMES)
         city = random.choice(CITIES)
         area = str(random.randint(100000, 999999))
-        address = f"{random.randint(1,999):03d}"
+        address = random.choice(ADDRESSES)
         prev = random.randint(50, 300)
         curr = prev + random.randint(10, 100)
 
@@ -67,9 +80,10 @@ def create_customer_file(data):
                 first[:10].ljust(10) +
                 last[:10].ljust(10) +
                 area[:6].ljust(6) +
-                address[:3] +
+                " " +
+                address[:29].ljust(29) +
                 city[:10].ljust(10) +
-                str(units)[:4].rjust(4)
+                str(units)[:5].ljust(5)
             )
             f.write(record + "\n")
 
@@ -92,10 +106,10 @@ def create_bill_file(data, rate=5):
             amount = units * rate
 
             record = (
-                pad(first, 15) +
-                pad(last, 15) +
-                pad(units, 5) +
-                pad(amount, 8)
+                first[:10].ljust(10) +
+                last[:10].ljust(10) +
+                str(units)[:5].ljust(5) +
+                str(amount)[:8].rjust(8)
             )
             f.write(record + "\n")
 
