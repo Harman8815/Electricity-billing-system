@@ -1,0 +1,24 @@
+//OZA265DL JOB NOTIFY=&SYSUID
+//*---------------------------------------------------
+//* PROCEDURE TO DELETE ALL VSAM CLUSTERS
+//* Uses symbolic parameter &HLQ for flexibility
+//*---------------------------------------------------
+//STEP001  EXEC PGM=IDCAMS
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD *
+  DELETE &HLQ..ELE.CUST.KSDS.FILE CLUSTER
+  SET MAXCC=0
+/*
+//STEP002  EXEC PGM=IDCAMS
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD *
+  DELETE &HLQ..ELE.METER.KSDS.FILE CLUSTER
+  SET MAXCC=0
+/*
+//STEP003  EXEC PGM=IDCAMS
+//SYSPRINT DD SYSOUT=*
+//SYSIN    DD *
+  DELETE &HLQ..ELE.BILL.KSDS.FILE CLUSTER
+  SET MAXCC=0
+/*
+
