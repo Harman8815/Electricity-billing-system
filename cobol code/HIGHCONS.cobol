@@ -196,7 +196,7 @@
 
            PERFORM 2100-OPEN-FILES.
            PERFORM 2200-PROCESS-METER-RECORDS.
-           PERFORM 2300-SORT-HIGH-CONSUMERS.
+           PERFORM 2300-FIND-TOP-FIVE-MAX.
            PERFORM 2400-WRITE-TOP-FIVE-REPORT.
            PERFORM 2500-CLOSE-FILES.
 
@@ -306,92 +306,54 @@
               ADD 1 TO WS-CUSTOMER-COUNT
            END-IF.
 
-       2300-SORT-HIGH-CONSUMERS SECTION.
+       2300-FIND-TOP-FIVE-MAX SECTION.
            DISPLAY '----------------------------------------'
-           DISPLAY 'SORTING ' WS-CUSTOMER-COUNT
-                   ' CUSTOMERS BY UNITS CONSUMED ......'
+           DISPLAY 'FINDING TOP 5 USING MAX APPROACH ......'
            DISPLAY '----------------------------------------'
 
-           MOVE WS-CUSTOMER-COUNT TO WS-SORT-COUNT
-
-           PERFORM VARYING WS-HIGH-LOOP-CTR FROM 1 BY 1
-                     UNTIL WS-HIGH-LOOP-CTR > WS-SORT-COUNT
-              SET WS-HIGH-IDX TO WS-HIGH-LOOP-CTR
-              SET WS-SORT-IDX TO WS-HIGH-LOOP-CTR
-              MOVE WS-H-UNITS(WS-HIGH-IDX)
-                  TO WS-S-UNITS-CONSUMED(WS-SORT-IDX)
-              MOVE WS-HIGH-LOOP-CTR TO WS-S-INDEX(WS-SORT-IDX)
+           PERFORM VARYING WS-TEMP-LOOP-CTR1 FROM 1 BY 1
+                     UNTIL WS-TEMP-LOOP-CTR1 > 5
+              MOVE 0 TO WS-TOP-UNITS(WS-TEMP-LOOP-CTR1)
+              MOVE 0 TO WS-TOP-IDX(WS-TEMP-LOOP-CTR1)
            END-PERFORM
-
-           PERFORM 2310-BUBBLE-SORT.
-       2360-FIND-TOP5 SECTION.
-
-            DISPLAY '----- FINDING TOP 5 CONSUMERS -----'
-
-            PERFORM VARYING WS-HIGH-LOOP-CTR FROM 1 BY 1
-                    UNTIL WS-HIGH-LOOP-CTR > WS-HIGH-COUNT
-
-                SET WS-HIGH-IDX TO WS-HIGH-LOOP-CTR
-                MOVE 'N' TO WS-FOUND-FLAG
-
-                PERFORM VARYING WS-RANK-COUNTER FROM 1 BY 1
-                        UNTIL WS-RANK-COUNTER > 5
-                           OR WS-FOUND-FLAG = 'Y'
-
-                    IF WS-H-UNITS(WS-HIGH-IDX) >
-                   WS-TOP-UNITS(WS-RANK-COUNTER)
-                   PERFORM VARYING WS-TEMP-LOOP-CTR1 FROM 5 BY -1
-                           UNTIL WS-TEMP-LOOP-CTR1 <= WS-RANK-COUNTER
-
-                       MOVE WS-TOP-UNITS(WS-TEMP-LOOP-CTR1 - 1)
-                           TO WS-TOP-UNITS(WS-TEMP-LOOP-CTR1)
-
-                       MOVE WS-TOP-IDX(WS-TEMP-LOOP-CTR1 - 1)
-                           TO WS-TOP-IDX(WS-TEMP-LOOP-CTR1)
-                   END-PERFORM
-                   MOVE WS-H-UNITS(WS-HIGH-IDX)
-                        TO WS-TOP-UNITS(WS-RANK-COUNTER)
-                   MOVE WS-HIGH-LOOP-CTR
-                       TO WS-TOP-IDX(WS-RANK-COUNTER)
-
-                   MOVE 'Y' TO WS-FOUND-FLAG
-
-                  END-IF
-
-               END-PERFORM
-
-            END-PERFORM.
-       2310-BUBBLE-SORT SECTION.
-
-           PERFORM VARYING WS-TEMP-LOOP-CTR1 FROM WS-SORT-COUNT
-                     BY -1 UNTIL WS-TEMP-LOOP-CTR1 = 1
-              PERFORM VARYING WS-TEMP-LOOP-CTR2 FROM 1 BY 1
-                        UNTIL WS-TEMP-LOOP-CTR2 >= WS-TEMP-LOOP-CTR1
-                 SET WS-SORT-IDX TO WS-TEMP-LOOP-CTR2
-                 SET WS-SORT-IDX2 UP BY 1
-                 IF WS-SORT-IDX2 <= WS-SORT-COUNT
-                    IF WS-S-UNITS-CONSUMED(WS-SORT-IDX)
-                       < WS-S-UNITS-CONSUMED(WS-SORT-IDX2)
-                       PERFORM 2320-SWAP-RECORDS
-                   END-IF
-                END-IF
-                SET WS-SORT-IDX2 DOWN BY 1
-              END-PERFORM
+           
+           PERFORM VARYING WS-RANK-COUNTER FROM 1 BY 1
+                     UNTIL WS-RANK-COUNTER > 5
+                      OR WS-RANK-COUNTER > WS-HIGH-COUNT
+              PERFORM 2310-FIND-NEXT-MAX
            END-PERFORM.
-       2320-SWAP-RECORDS SECTION.
 
-           MOVE WS-S-UNITS-CONSUMED(WS-SORT-IDX)
-               TO WS-TEMP-UNITS
-           MOVE WS-S-INDEX(WS-SORT-IDX)
-               TO WS-TEMP-INDEX
-           MOVE WS-S-UNITS-CONSUMED(WS-SORT-IDX2)
-               TO WS-S-UNITS-CONSUMED(WS-SORT-IDX)
-           MOVE WS-S-INDEX(WS-SORT-IDX2)
-               TO WS-S-INDEX(WS-SORT-IDX)
-           MOVE WS-TEMP-UNITS
-               TO WS-S-UNITS-CONSUMED(WS-SORT-IDX2)
-           MOVE WS-TEMP-INDEX
-               TO WS-S-INDEX(WS-SORT-IDX2).
+       2310-FIND-NEXT-MAX SECTION.
+           MOVE 0 TO WS-TEMP-UNITS
+           MOVE 0 TO WS-TEMP-INDEX
+           
+           PERFORM VARYING WS-HIGH-LOOP-CTR FROM 1 BY 1
+                     UNTIL WS-HIGH-LOOP-CTR > WS-HIGH-COUNT
+              SET WS-HIGH-IDX TO WS-HIGH-LOOP-CTR
+              
+              MOVE 'N' TO WS-FOUND-FLAG
+              PERFORM VARYING WS-TEMP-LOOP-CTR1 FROM 1 BY 1
+                        UNTIL WS-TEMP-LOOP-CTR1 >= WS-RANK-COUNTER
+                           OR WS-FOUND-FLAG = 'Y'
+                 IF WS-HIGH-LOOP-CTR = WS-TOP-IDX(WS-TEMP-LOOP-CTR1)
+                    MOVE 'Y' TO WS-FOUND-FLAG
+                 END-IF
+              END-PERFORM
+              
+              IF WS-FOUND-FLAG NOT = 'Y'
+                 IF WS-H-UNITS(WS-HIGH-IDX) > WS-TEMP-UNITS
+                    MOVE WS-H-UNITS(WS-HIGH-IDX) TO WS-TEMP-UNITS
+                    MOVE WS-HIGH-LOOP-CTR TO WS-TEMP-INDEX
+                 END-IF
+              END-IF
+              
+              MOVE 'N' TO WS-FOUND-FLAG
+           END-PERFORM
+           
+           IF WS-TEMP-INDEX > 0
+              MOVE WS-TEMP-UNITS TO WS-TOP-UNITS(WS-RANK-COUNTER)
+              MOVE WS-TEMP-INDEX TO WS-TOP-IDX(WS-RANK-COUNTER)
+           END-IF.
        2400-WRITE-TOP-FIVE-REPORT SECTION.
            DISPLAY '----------------------------------------'
            DISPLAY 'WRITING TOP 5 HIGH CONSUMERS REPORT .....'
@@ -399,15 +361,15 @@
 
            PERFORM VARYING WS-RANK-COUNTER FROM 1 BY 1
                      UNTIL WS-RANK-COUNTER > 5
-              IF WS-RANK-COUNTER <= WS-SORT-COUNT
+                      OR WS-RANK-COUNTER > WS-HIGH-COUNT
+              IF WS-TOP-IDX(WS-RANK-COUNTER) > 0
                  PERFORM 2410-WRITE-SINGLE-RECORD
               END-IF
            END-PERFORM.
 
        2410-WRITE-SINGLE-RECORD SECTION.
-           MOVE WS-RANK-COUNTER TO WS-TEMP-RANK-IDX
-           SET WS-SORT-IDX TO WS-TEMP-RANK-IDX
-           SET WS-HIGH-IDX TO WS-S-INDEX(WS-SORT-IDX)
+           MOVE WS-TOP-IDX(WS-RANK-COUNTER) TO WS-HIGH-LOOP-CTR
+           SET WS-HIGH-IDX TO WS-HIGH-LOOP-CTR
 
            IF WS-LINE-COUNT >= WS-MAX-LINES
                PERFORM 2760-WRITE-FOOTER
