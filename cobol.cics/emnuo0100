@@ -20,12 +20,7 @@
 
        01 WS-RESP-CODE         PIC S9(08) COMP.
 
-      *----------------------------------------------------------------*
-      * FLAGS
-      *----------------------------------------------------------------*
-       01 WS-FLAGS.
-          05 WS-VALID-FLAG     PIC X VALUE 'N'.
-
+       01 WS-MSG               PIC X(40).
       *----------------------------------------------------------------*
        LINKAGE SECTION.
 
@@ -43,6 +38,7 @@
               MOVE -1 TO CHOICEL
               PERFORM 3000-SEND-MAP
            ELSE
+               MOVE DFHCOMMAREA   TO WS-COMMAREA
                PERFORM 2000-RECEIVE-MAP
            END-IF.
            EXIT.
@@ -65,36 +61,34 @@
            EVALUATE EIBAID
                WHEN DFHENTER
                     PERFORM 2200-PROCESS-OPT
-               WHEN DFHF3
+               WHEN DFHPF3
                     PERFORM 9000-TERMINATE
                WHEN DFHPF6
-                    MOVE LOW-VALUES TO EB01MSDO
-                    PERFORM 2000-SEND-MAP
+                    MOVE LOW-VALUES TO EB01MAPO
+                    PERFORM 3000-SEND-MAP
                WHEN OTHER
-                    MOVE 'INVALID KEY PRESSED ' TO USRMSGO
-                    PERFORM 2000-SEND-MAP
+                    MOVE 'INVALID KEY PRESSED ' TO MSGTXTO
+                    PERFORM 3000-SEND-MAP
            END-EVALUATE.
 
       *----------------------------------------------------------------*
        2200-PROCESS-OPT.
 
-           EVALUATE CHOICEI
+           MOVE CHOICEI           TO WS-CHOICE.
+           EVALUATE WS-CHOICE
                WHEN '1'
-                   EXEC CICS XCTL
-                        PROGRAM('EB02CUSTM')
-                   END-EXEC
+                   MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
+                   PERFORM 3000-SEND-MAP
                WHEN '2'
-                   EXEC CICS XCTL
-                        PROGRAM('EB06METERM')
-                   END-EXEC
+                   MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
+                   PERFORM 3000-SEND-MAP
                WHEN '3'
-                   EXEC CICS RETURN
-                   END-EXEC
+                   EXEC CICS RETURN END-EXEC
                WHEN OTHER
                     MOVE 'INVALID OPTION. PLEASE ENTER 1, 2 OR 3'
                           TO MSGTXTO
                    MOVE -1 TO CHOICEL
-                   PERFORM 300-SEND-MAP
+                   PERFORM 3000-SEND-MAP
            END-EVALUATE.
 
        3000-SEND-MAP.
@@ -109,10 +103,21 @@
            END-EXEC
            IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
            EXEC CICS RETURN
-                TRANSID('EB01')
+                TRANSID('EM01')
                 COMMAREA(WS-COMMAREA)
            END-EXEC
            END-IF.
            EXIT.
 
+        9000-TERMINATE.
+
+            MOVE 'PRESS CTRL + BREAK TO EXIT' TO WS-MSG.
+            EXEC CICS SEND TEXT
+                           FROM(WS-MSG)
+                           RESP(WS-RESP-CODE)
+                           ERASE
+            END-EXEC.
+            IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+               EXEC CICS RETURN END-EXEC
+            END-IF.
 
