@@ -14,7 +14,8 @@
        01 WS-COMMAREA.
           05 WS-DUMMY              PIC X(01).
 
-       01 WS-RESP-CODE             PIC S9(08) COMP.
+       77 WS-RESP-CODE             PIC S9(08) COMP.
+       77 ERROR-FLAG              PIC 9(01) VALUE 0.
        01 WS-MSG                  PIC X(40).
 
        01 WS-CUST-ID               PIC X(12).
@@ -39,37 +40,19 @@
        1000-MAIN-LOGIC.
 
            IF EIBCALEN = 0
-               PERFORM 2000-INITIAL-SCREEN
-               PERFORM 2100-SEND-MAP
+              PERFORM 2000-INITIAL-SCREEN
            ELSE
                PERFORM 3000-RECEIVE-MAP
-               PERFORM 4000-PROCESS-INPUT
            END-IF.
+           EXIT.
 
        2000-INITIAL-SCREEN.
 
            MOVE LOW-VALUES TO EB04MAPO
-
            MOVE -1 TO CIDL
-
            MOVE SPACES TO MSGTXTO.
-
-       2100-SEND-MAP.
-
-           EXEC CICS SEND
-                MAP('EB04MAP')
-                MAPSET('EB04MSD')
-                FROM(EB04MAPO)
-                ERASE
-                CURSOR
-                RESP(WS-RESP-CODE)
-           END-EXEC
-
-           EXEC CICS RETURN
-                TRANSID('EB04')
-                COMMAREA(WS-COMMAREA)
-                LENGTH(LENGTH OF WS-COMMAREA)
-           END-EXEC.
+           PERFORM 4000-SEND-MAP.
+           EXIT.
 
        3000-RECEIVE-MAP.
 
@@ -79,53 +62,101 @@
                 INTO(EB04MAPI)
                 RESP(WS-RESP-CODE)
            END-EXEC.
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+              PERFORM 3100-EVAL-USER-RESP
+           END-IF.
+           EXIT.
 
-       4000-PROCESS-INPUT.
-           MOVE CIDI TO WS-CUST-ID
+       3100-EVAL-USER-RESP.
 
-           IF WS-CUST-ID = SPACES
-               MOVE 'PLEASE ENTER CUSTOMER ID'
-                    TO MSGTXTO
-               PERFORM 2000-INITIAL-SCREEN
-               PERFORM 2100-SEND-MAP
+           EVALUATE EIBAID
+               WHEN DFHENTER
+                    PERFORM 3200-PROCESS-INPUT
+               WHEN DFHPF3
+                    PERFORM 9000-TERMINATE
+               WHEN DFHPF6
+                    MOVE LOW-VALUES TO EB04MAPO
+                    PERFORM 4000-SEND-MAP
+               WHEN OTHER
+                    MOVE 'INVALID KEY PRESSED' TO MSGTXTO
+                    PERFORM 4000-SEND-MAP
+           END-EVALUATE.
+           EXIT.
+
+       3200-PROCESS-INPUT.
+
+      *----------------------------------------------------------------*
+      * VALIDATION
+      *----------------------------------------------------------------*
+           MOVE SPACES TO MSGTXTO.
+           MOVE 0 TO ERROR-FLAG.
+
+           IF WS-CUST-ID IS EQUAL TO LOW-VALUES OR
+              WS-CUST-ID IS EQUAL TO SPACES
+              MOVE 'CUSTOMER ID IS REQUIRED' TO MSGTXTO
+              MOVE -1 TO CIDL
+              MOVE 1 TO ERROR-FLAG
+           END-IF.
+
+           IF ERROR-FLAG = 1
+              PERFORM 4000-SEND-MAP
            ELSE
                PERFORM 5000-READ-VSAM
            END-IF.
 
+           EXIT.
        5000-READ-VSAM.
 
+      *----------------------------------------------------------------*
+      * READ CUSTOMER RECORD
+      *----------------------------------------------------------------*
+           MOVE CIDI TO WS-CUST-ID
            EXEC CICS READ
                 DATASET('OZA266.ELE.CUST.KSDS.FILE')
                 RIDFLD(WS-CUST-ID)
                 INTO(WS-CUST-REC)
                 RESP(WS-RESP-CODE)
-           END-EXEC
+           END-EXEC.
+      *----------------------------------------------------------------*
+      * HANDLE RESPONSE
+      *----------------------------------------------------------------*
            EVALUATE WS-RESP-CODE
-
                WHEN DFHRESP(NORMAL)
-
                    MOVE FIRST-NAME TO FNO
                    MOVE LAST-NAME  TO LNO
                    MOVE AREA-CODE  TO AREAO
                    MOVE ADDRESS    TO ADDRO
                    MOVE CITY       TO CITYO
                    MOVE UNITS      TO UNITO
-                   MOVE 'CUSTOMER RECORD FOUND'
-                        TO MSGTXTO
-
+                   MOVE 'CUSTOMER RECORD FOUND' TO MSGTXTO
                WHEN DFHRESP(NOTFND)
-
-                   MOVE 'CUSTOMER NOT FOUND'
-                        TO MSGTXTO
-
+                   MOVE 'CUSTOMER NOT FOUND' TO MSGTXTO
                WHEN OTHER
+                   MOVE 'ERROR READING RECORD' TO MSGTXTO
+           END-EVALUATE.
 
-                   MOVE 'ERROR READING RECORD'
-                        TO MSGTXTO
+           PERFORM 4000-SEND-MAP.
+           EXIT.
 
-           END-EVALUATE
+       4000-SEND-MAP.
 
-           PERFORM 2100-SEND-MAP.
+           EXEC CICS SEND
+                MAP('EB04MAP')
+                MAPSET('EB04MSD')
+                FROM(EB04MAPO)
+                RESP(WS-RESP-CODE)
+                ERASE
+                CURSOR
+           END-EXEC.
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+              EXEC CICS RETURN
+                   TRANSID('EB04')
+                   COMMAREA(WS-COMMAREA)
+                   LENGTH(LENGTH OF WS-COMMAREA)
+              END-EXEC
+            END-IF.
+           EXIT.
+
        9000-TERMINATE.
 
            MOVE 'PRESS CTRL + BREAK TO EXIT' TO WS-MSG.
