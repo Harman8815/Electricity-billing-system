@@ -122,8 +122,8 @@
       *----------------------------------------------------------------*
            EVALUATE WS-RESP-CODE
                WHEN DFHRESP(NORMAL)
-                   MOVE FIRST-NAME TO FNO
-                   MOVE LAST-NAME  TO LNO
+                   MOVE FIRST-NAME TO FNAMEO
+                   MOVE LAST-NAME  TO LNAMEO
                    MOVE AREA-CODE  TO AREAO
                    MOVE ADDRESS    TO ADDRO
                    MOVE CITY       TO CITYO

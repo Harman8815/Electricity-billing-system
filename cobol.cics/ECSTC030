@@ -222,7 +222,7 @@
       * WRITE TO KSDS
       *----------------------------------------------------------------*
            EXEC CICS WRITE
-                FILE('ECUSKSDS')
+                FILE('OZA266.ELE.CUST.KSDS.FILE')
                 FROM(WS-WORK-AREA)
                 RIDFLD(CUST-ID)
                 RESP(WS-RESP-CODE)
