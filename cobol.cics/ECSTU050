@@ -4,9 +4,11 @@
        ENVIRONMENT DIVISION.
 
        DATA DIVISION.
-
-*----------------------------------------------------------------*
+       01 WS-MSG                PIC X(40).
        WORKING-STORAGE SECTION.
+           COPY DFHBMSCA.
+           COPY DFHAID.
+           COPY EB05MSD.
 
        01 WS-COMMAREA.
           05 WS-STAGE            PIC X VALUE '1'.  *> '1'=MAP1, '2'=MAP2
@@ -15,9 +17,6 @@
 
        01 WS-CUST-ID             PIC X(12).
 
-*----------------------------------------------------------------*
-* CUSTOMER RECORD
-*----------------------------------------------------------------*
        01 WS-CUST-REC.
           05 CUST-ID             PIC X(12).
           05 FIRST-NAME          PIC X(15).
@@ -27,9 +26,6 @@
           05 CITY                PIC X(15).
           05 UNITS               PIC 9(05).
 
-*----------------------------------------------------------------*
-* NEW VALUES
-*----------------------------------------------------------------*
        01 WS-NEW-DATA.
           05 WS-NFN              PIC X(15).
           05 WS-NLN              PIC X(15).
@@ -37,20 +33,13 @@
           05 WS-NAD              PIC X(20).
           05 WS-NCT              PIC X(15).
 
-*----------------------------------------------------------------*
-       COPY DFHBMSCA.
-       COPY DFHAID.
-       COPY EB05MSD.
 
-*----------------------------------------------------------------*
        LINKAGE SECTION.
        01 DFHCOMMAREA.
           05 LK-COMM             PIC X.
 
-*----------------------------------------------------------------*
        PROCEDURE DIVISION.
 
-*----------------------------------------------------------------*
        1000-MAIN-LOGIC.
 
            IF EIBCALEN = 0
@@ -68,7 +57,6 @@
                END-IF
            END-IF.
 
-*----------------------------------------------------------------*
        2000-SEND-MAP1.
 
            MOVE LOW-VALUES TO EB05MAP1O
@@ -83,12 +71,11 @@
            MOVE '1' TO WS-STAGE
 
            EXEC CICS RETURN
-                TRANSID('EM02')
+                TRANSID('EB05')
                 COMMAREA(WS-COMMAREA)
                 LENGTH(1)
            END-EXEC.
 
-*----------------------------------------------------------------*
        2100-SEND-MAP2.
 
            MOVE LOW-VALUES TO EB05MAP2O
@@ -111,12 +98,11 @@
            MOVE '2' TO WS-STAGE
 
            EXEC CICS RETURN
-                TRANSID('EM02')
+                TRANSID('EB05')
                 COMMAREA(WS-COMMAREA)
                 LENGTH(1)
            END-EXEC.
 
-*----------------------------------------------------------------*
        3000-RECEIVE-MAP1.
 
            EXEC CICS RECEIVE MAP('EB05MAP1')
@@ -131,7 +117,6 @@
                PERFORM 2000-SEND-MAP1
            END-IF.
 
-*----------------------------------------------------------------*
        3100-RECEIVE-MAP2.
 
            EXEC CICS RECEIVE MAP('EB05MAP2')
@@ -145,7 +130,6 @@
            MOVE AD-NEWI TO WS-NAD
            MOVE CT-NEWI TO WS-NCT.
 
-*----------------------------------------------------------------*
        4000-READ-VSAM.
 
            EXEC CICS READ
@@ -166,7 +150,6 @@
                    PERFORM 2000-SEND-MAP1
            END-EVALUATE.
 
-*----------------------------------------------------------------*
        5000-PROCESS-UPDATE.
 
            IF WS-NFN NOT = SPACES
@@ -191,7 +174,6 @@
 
            PERFORM 6000-REWRITE-VSAM.
 
-*----------------------------------------------------------------*
        6000-REWRITE-VSAM.
 
            EXEC CICS REWRITE
@@ -208,6 +190,16 @@
 
            PERFORM 2100-SEND-MAP2.
 
-*----------------------------------------------------------------*
-       END PROGRAM EB05CUSTU.
+       9000-TERMINATE.
+
+           MOVE 'PRESS CTRL + BREAK TO EXIT' TO WS-MSG.
+           EXEC CICS SEND TEXT
+                           FROM(WS-MSG)
+                           RESP(WS-RESP-CODE)
+                           ERASE
+           END-EXEC.
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+               EXEC CICS RETURN END-EXEC
+           END-IF.
+
 

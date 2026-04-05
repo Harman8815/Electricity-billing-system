@@ -5,105 +5,87 @@
 
        DATA DIVISION.
 
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
        WORKING-STORAGE SECTION.
 
+           COPY DFHBMSCA.
+           COPY DFHAID.
+           COPY EB03MSD.
+
        01 WS-COMMAREA.
-          05 WS-DUMMY              PIC X(01).
-
-       01 WS-RESP-CODE             PIC S9(08) COMP.
-
-*----------------------------------------------------------------*
-* CUSTOMER DATA
-*----------------------------------------------------------------*
-       01 WS-CUST-DATA.
           05 WS-FIRST-NAME         PIC X(15).
           05 WS-LAST-NAME          PIC X(15).
           05 WS-AREA-CODE          PIC X(10).
           05 WS-ADDRESS            PIC X(30).
-          05 WS-CITY               PIC X(15).
-          05 WS-CUST-ID            PIC X(12).
-          05 WS-UNITS              PIC 9(05) VALUE 0.
+          05 WS-CITY               PIC X(20).
 
-*----------------------------------------------------------------*
-* ID GENERATION VARIABLES
-*----------------------------------------------------------------*
+       77 WS-RESP-CODE             PIC S9(08) COMP.
+
+      *----------------------------------------------------------------*
+      * CUSTOMER DATA
+      *----------------------------------------------------------------*
+      *01 WS-CUST-DATA.
+      *   05 WS-F-NAME             PIC X(15).
+      *   05 WS-L-NAME             PIC X(15).
+      *   05 WS-A-CODE             PIC X(10).
+      *   05 WS-A-ADDR             PIC X(30).
+      *   05 WS-C-CITY             PIC X(15).
+      *   05 WS-C-ID               PIC X(12).
+      *   WS-UNITS                 PIC 9(05) VALUE 0.
+
+      *----------------------------------------------------------------*
+      * ID GENERATION VARIABLES
+      *----------------------------------------------------------------*
        01 WS-ID-GEN.
           05 WS-FN-PART            PIC X(02).
           05 WS-LN-PART            PIC X(02).
           05 WS-AREA-PART          PIC X(04).
-          05 WS-RANDOM-NUM         PIC 9(06).
           05 WS-RAND-3DIGIT        PIC 9(03).
           05 WS-RETRY-CTR          PIC 9(02) VALUE 0.
+          05 WS-RANDOM-NUM         PIC 9(06).
 
-*----------------------------------------------------------------*
-* VSAM RECORD STRUCTURE
-*----------------------------------------------------------------*
-       01 WS-CUST-REC.
+      *----------------------------------------------------------------*
+      * VSAM RECORD STRUCTURE
+      *----------------------------------------------------------------*
+       01 WS-WORK-AREA.
           05 CUST-ID               PIC X(12).
           05 FIRST-NAME            PIC X(15).
           05 LAST-NAME             PIC X(15).
           05 AREA-CODE             PIC X(10).
-          05 ADDRESS               PIC X(30).
+          05 ADDRESS-1             PIC X(30).
           05 CITY                  PIC X(15).
           05 UNITS                 PIC 9(05).
 
-*----------------------------------------------------------------*
-* COPYBOOKS
-*----------------------------------------------------------------*
-       COPY DFHBMSCA.
-       COPY DFHAID.
-       COPY EB03MSD.
+       77 WS-CUST-ID               PIC X(12).
 
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * COPYBOOKS
+      *----------------------------------------------------------------*
        LINKAGE SECTION.
 
        01 DFHCOMMAREA.
-          05 LK-COMM-DATA          PIC X(01).
+          05 LS-FIRST-NAME         PIC X(15).
+          05 LS-LAST-NAME          PIC X(15).
+          05 LS-AREA-CODE          PIC X(10).
+          05 LS-ADDRESS            PIC X(30).
+          05 LS-CITY               PIC X(20).
 
-*----------------------------------------------------------------*
        PROCEDURE DIVISION.
-
-*----------------------------------------------------------------*
        1000-MAIN-LOGIC.
 
            IF EIBCALEN = 0
-               PERFORM 2000-INITIAL-SCREEN
-               PERFORM 2100-SEND-MAP
-           ELSE
-               PERFORM 3000-RECEIVE-MAP
-               PERFORM 4000-PROCESS-INPUT
+              MOVE LOW-VALUES TO EB03MAPO
+              MOVE -1 TO FNAMEL
+              MOVE SPACES TO MSGTXTO
+              PERFORM 3000-SEND-MAP
            END-IF.
+           IF EIBCALEN > 0
+               MOVE DFHCOMMAREA TO WS-COMMAREA
+               PERFORM 2000-RECEIVE-MAP
+           END-IF.
+           EXIT.
 
-*----------------------------------------------------------------*
-       2000-INITIAL-SCREEN.
-
-           MOVE LOW-VALUES TO EB03MAPO
-
-           MOVE -1 TO FNAMEL
-
-           MOVE SPACES TO MSGTXTO.
-
-*----------------------------------------------------------------*
-       2100-SEND-MAP.
-
-           EXEC CICS SEND
-                MAP('EB03MAP')
-                MAPSET('EB03MSD')
-                FROM(EB03MAPO)
-                ERASE
-                CURSOR
-                RESP(WS-RESP-CODE)
-           END-EXEC
-
-           EXEC CICS RETURN
-                TRANSID('EM02')
-                COMMAREA(WS-COMMAREA)
-                LENGTH(LENGTH OF WS-COMMAREA)
-           END-EXEC.
-
-*----------------------------------------------------------------*
-       3000-RECEIVE-MAP.
+       2000-RECEIVE-MAP.
 
            EXEC CICS RECEIVE
                 MAP('EB03MAP')
@@ -111,57 +93,76 @@
                 INTO(EB03MAPI)
                 RESP(WS-RESP-CODE)
            END-EXEC.
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+              PERFORM 2100-EVAL-USER-RESP
+           END-IF.
+           EXIT.
 
-*----------------------------------------------------------------*
-       4000-PROCESS-INPUT.
+       2100-EVAL-USER-RESP.
 
-*----------------------------------------------------------------*
-* MOVE INPUT FROM MAP
-*----------------------------------------------------------------*
-           MOVE FNAMEI TO WS-FIRST-NAME
-           MOVE LNAMEI TO WS-LAST-NAME
-           MOVE AREAI  TO WS-AREA-CODE
-           MOVE ADDRI  TO WS-ADDRESS
-           MOVE CITYI  TO WS-CITY
-           MOVE UNITSI TO WS-UNITS
+           EVALUATE EIBAID
+               WHEN DFHENTER
+                    PERFORM 2200-PROCESS-INPUT
+               WHEN DFHPF3
+                    PERFORM 9000-TERMINATE
+               WHEN DFHPF6
+                    MOVE LOW-VALUES TO EB03MAPO
+                    PERFORM 3000-SEND-MAP
+               WHEN OTHER
+                    MOVE 'INVALID KEY PRESSED' TO MSGTXTO
+                    PERFORM 3000-SEND-MAP
+           END-EVALUATE.
+           EXIT.
 
-*----------------------------------------------------------------*
-* VALIDATION
-*----------------------------------------------------------------*
-           IF WS-FIRST-NAME = SPACES OR
-              WS-LAST-NAME  = SPACES OR
-              WS-AREA-CODE  = SPACES OR
-              WS-ADDRESS    = SPACES OR
-              WS-CITY       = SPACES
+       2200-PROCESS-INPUT.
 
-               MOVE 'ALL FIELDS ARE MANDATORY'
-                    TO MSGTXTO
-               PERFORM 2000-INITIAL-SCREEN
-               PERFORM 2100-SEND-MAP
-           ELSE
-               PERFORM 5000-GENERATE-ID
-               PERFORM 6000-WRITE-VSAM
+      *----------------------------------------------------------------*
+      * MOVE INPUT FROM MAP
+      *----------------------------------------------------------------*
+           MOVE FNAMEI TO WS-FIRST-NAME.
+           MOVE LNAMEI TO WS-LAST-NAME.
+           MOVE AREAI  TO WS-AREA-CODE.
+           MOVE ADDRI  TO WS-ADDRESS.
+           MOVE CITYI  TO WS-CITY.
+
+      *----------------------------------------------------------------*
+      * VALIDATION
+      *----------------------------------------------------------------*
+           IF WS-FIRST-NAME IS EQUAL TO LOW-VALUES
+              MOVE 'FIRST NAME IS REQUIRED'    TO MSGTXTO
+              MOVE -1                TO FNAMEL
+              PERFORM 3000-SEND-MAP
            END-IF.
 
-*----------------------------------------------------------------*
-       5000-GENERATE-ID.
+           IF WS-LAST-NAME  IS EQUAL TO LOW-VALUES OR
+              WS-AREA-CODE  IS EQUAL TO LOW-VALUES OR
+              WS-ADDRESS    IS EQUAL TO LOW-VALUES OR
+              WS-CITY       IS EQUAL TO LOW-VALUES
+              MOVE 'ALL FIELDS ARE MANDATORY'  TO MSGTXTO
+              PERFORM 3000-SEND-MAP
+           ELSE
+               PERFORM 2300-GENERATE-ID
+           END-IF.
 
-*----------------------------------------------------------------*
-* TAKE FIRST 2 LETTERS AND AREA CODE
-*----------------------------------------------------------------*
+           EXIT.
+
+      *----------------------------------------------------------------*
+       2300-GENERATE-ID.
+      *----------------------------------------------------------------*
+      * TAKE FIRST 2 LETTERS AND AREA CODE
+      *----------------------------------------------------------------*
            MOVE WS-FIRST-NAME(1:2) TO WS-FN-PART
            MOVE WS-LAST-NAME(1:2)  TO WS-LN-PART
            MOVE WS-AREA-CODE(1:4)  TO WS-AREA-PART
 
-*----------------------------------------------------------------*
-* GENERATE RANDOM 3 DIGIT NUMBER
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * GENERATE RANDOM 3 DIGIT NUMBER
+      *----------------------------------------------------------------*
            COMPUTE WS-RANDOM-NUM = FUNCTION RANDOM * 1000
            COMPUTE WS-RAND-3DIGIT = FUNCTION MOD(WS-RANDOM-NUM, 1000)
-
-*----------------------------------------------------------------*
-* BUILD CUSTOMER ID (C + FN(2) + LN(2) + AREA(4) + RAND(3))
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * BUILD CUSTOMER ID
+      *----------------------------------------------------------------*
            STRING
                'C'
                WS-FN-PART
@@ -171,62 +172,80 @@
            DELIMITED BY SIZE
            INTO WS-CUST-ID.
 
-*----------------------------------------------------------------*
-       6000-WRITE-VSAM.
+           PERFORM 2400-WRITE-VSAM.
 
-*----------------------------------------------------------------*
-* PREPARE RECORD
-*----------------------------------------------------------------*
+           EXIT.
+
+       2400-WRITE-VSAM.
+
+      *----------------------------------------------------------------*
+      * PREPARE RECORD
+      *----------------------------------------------------------------*
            MOVE WS-CUST-ID    TO CUST-ID
            MOVE WS-FIRST-NAME TO FIRST-NAME
            MOVE WS-LAST-NAME  TO LAST-NAME
            MOVE WS-AREA-CODE  TO AREA-CODE
-           MOVE WS-ADDRESS    TO ADDRESS
+           MOVE WS-ADDRESS    TO ADDRESS-1
            MOVE WS-CITY       TO CITY
-           MOVE WS-UNITS      TO UNITS
+           MOVE ZEROS         TO UNITS
 
-*----------------------------------------------------------------*
-* WRITE TO KSDS
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * WRITE TO KSDS
+      *----------------------------------------------------------------*
            EXEC CICS WRITE
-                DATASET('OZA266.ELE.CUST.KSDS.FILE')
-                FROM(WS-CUST-REC)
+                FILE('ECUSKSDS')
+                FROM(WS-WORK-AREA)
+                RIDFLD(CUST-ID)
                 RESP(WS-RESP-CODE)
            END-EXEC
-
-*----------------------------------------------------------------*
-* HANDLE RESPONSE
-*----------------------------------------------------------------*
+      *----------------------------------------------------------------*
+      * HANDLE RESPONSE
+      *----------------------------------------------------------------*
            EVALUATE WS-RESP-CODE
 
                WHEN DFHRESP(NORMAL)
                    MOVE WS-CUST-ID TO CIDO
                    MOVE 'CUSTOMER ID IS GENERATED'
                         TO MSGTXTO
-
+                   PERFORM 3000-SEND-MAP
                WHEN DFHRESP(DUPREC)
                    ADD 1 TO WS-RETRY-CTR
                    IF WS-RETRY-CTR < 10
-                       PERFORM 5000-GENERATE-ID
-                       PERFORM 6000-WRITE-VSAM
+                       PERFORM 2300-GENERATE-ID
+                       PERFORM 2400-WRITE-VSAM
                    ELSE
                        MOVE 'UNABLE TO GENERATE UNIQUE ID'
                             TO MSGTXTO
                        MOVE 0 TO WS-RETRY-CTR
                    END-IF
-
                WHEN OTHER
                    MOVE 'ERROR WRITING RECORD'
                         TO MSGTXTO
-
            END-EVALUATE
 
-           PERFORM 2100-SEND-MAP.
+           PERFORM 3000-SEND-MAP.
 
-*----------------------------------------------------------------*
+       3000-SEND-MAP.
+
+           EXEC CICS SEND
+                MAP('EB03MAP')
+                MAPSET('EB03MSD')
+                FROM(EB03MAPO)
+                RESP(WS-RESP-CODE)
+                ERASE
+                CURSOR
+           END-EXEC
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+              EXEC CICS RETURN
+                   TRANSID('EB03')
+                   COMMAREA(WS-COMMAREA)
+                   LENGTH(LENGTH OF WS-COMMAREA)
+              END-EXEC
+            END-IF.
+           EXIT.
+
        9000-TERMINATE.
 
-*----------------------------------------------------------------*
            MOVE 'PRESS CTRL + BREAK TO EXIT' TO MSGTXTO.
            EXEC CICS SEND TEXT
                            FROM(MSGTXTO)
@@ -236,6 +255,4 @@
            IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
                EXEC CICS RETURN END-EXEC
            END-IF.
-
-*----------------------------------------------------------------*
-       END PROGRAM ECSTC030.
+
