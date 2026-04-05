@@ -78,20 +78,19 @@
            EVALUATE WS-CHOICE
                WHEN 'C'
                     EXEC CICS XCTL
-                         PROGRAM('ECSTC030')
+                         PROGRAM('EMNUO020')
                     END-EXEC
                WHEN 'R'
-                    EXEC CICS XCTL
-                         PROGRAM('ECSTR040')
-                    END-EXEC
+                   MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
+                   PERFORM 3000-SEND-MAP
                WHEN 'U'
-                    EXEC CICS XCTL
-                         PROGRAM('ECSTU050')
-                    END-EXEC
+                   MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
+                   PERFORM 3000-SEND-MAP
                WHEN '3'
                    EXEC CICS RETURN END-EXEC
                WHEN OTHER
-                    MOVE 'INVALID OPTION. PLEASE ENTER C, R, U OR 3' TO MSGTXTO
+                    MOVE 'INVALID OPTION. PLEASE ENTER C, R, U OR 3'
+                          TO MSGTXTO
                    MOVE -1 TO CHOICEL
                    PERFORM 3000-SEND-MAP
            END-EVALUATE.
@@ -107,10 +106,10 @@
                 RESP(WS-RESP-CODE)
            END-EXEC
            IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
-              EXEC CICS RETURN
-                   TRANSID('EM02')
-                   COMMAREA(WS-COMMAREA)
-              END-EXEC
+           EXEC CICS RETURN
+                TRANSID('EM02')
+                COMMAREA(WS-COMMAREA)
+           END-EXEC
            END-IF.
            EXIT.
 

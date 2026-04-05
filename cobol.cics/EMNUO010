@@ -77,9 +77,8 @@
            MOVE CHOICEI           TO WS-CHOICE.
            EVALUATE WS-CHOICE
                WHEN '1'
-                   EXEC CICS XCTL
-                        PROGRAM('EMNUO020')
-                   END-EXEC
+                   MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
+                   PERFORM 3000-SEND-MAP
                WHEN '2'
                    MOVE 'PGM UNDER CONSTRUCTION ' TO MSGTXTO
                    PERFORM 3000-SEND-MAP
