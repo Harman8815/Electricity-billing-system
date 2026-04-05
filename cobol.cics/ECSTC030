@@ -37,12 +37,14 @@
       * ID GENERATION VARIABLES
       *----------------------------------------------------------------*
        01 WS-ID-GEN.
-          05 WS-FN-PART            PIC X(02).
-          05 WS-LN-PART            PIC X(02).
-          05 WS-AREA-PART          PIC X(04).
-          05 WS-RAND-3DIGIT        PIC 9(03).
+          05 WS-CUST-PREFIX        PIC X VALUE 'C'.
+          05 WS-CUST-FN-CHARS      PIC X(2).
+          05 WS-CUST-LN-CHARS      PIC X(2).
+          05 WS-CUST-AREA-4        PIC X(4).
+          05 WS-CUST-RAND-3        PIC 9(3).
+          05 WS-RAND-SEED          PIC S9(09) COMP-3 VALUE +0.
           05 WS-RETRY-CTR          PIC 9(02) VALUE 0.
-          05 WS-RANDOM-NUM         PIC 9(06).
+          05 WS-CURRENT-TIME       PIC 9(08).
 
       *----------------------------------------------------------------*
       * VSAM RECORD STRUCTURE
@@ -151,26 +153,24 @@
       *----------------------------------------------------------------*
       * TAKE FIRST 2 LETTERS AND AREA CODE
       *----------------------------------------------------------------*
-           MOVE WS-FIRST-NAME(1:2) TO WS-FN-PART
-           MOVE WS-LAST-NAME(1:2)  TO WS-LN-PART
-           MOVE WS-AREA-CODE(1:4)  TO WS-AREA-PART
+           MOVE WS-FIRST-NAME(1:2)   TO WS-CUST-FN-CHARS.
+           MOVE WS-LAST-NAME(1:2)    TO WS-CUST-LN-CHARS.
+           MOVE WS-AREA-CODE(1:4)    TO WS-CUST-AREA-4.
 
       *----------------------------------------------------------------*
       * GENERATE RANDOM 3 DIGIT NUMBER
       *----------------------------------------------------------------*
-           COMPUTE WS-RANDOM-NUM = FUNCTION RANDOM * 1000
-           COMPUTE WS-RAND-3DIGIT = FUNCTION MOD(WS-RANDOM-NUM, 1000)
+           ACCEPT WS-CURRENT-TIME FROM TIME
+           COMPUTE WS-RAND-SEED = FUNCTION RANDOM(WS-CURRENT-TIME) * 1000.
+           COMPUTE WS-CUST-RAND-3 = FUNCTION MOD(WS-RAND-SEED, 1000).
+
       *----------------------------------------------------------------*
       * BUILD CUSTOMER ID
       *----------------------------------------------------------------*
-           STRING
-               'C'
-               WS-FN-PART
-               WS-LN-PART
-               WS-AREA-PART
-               WS-RAND-3DIGIT
-           DELIMITED BY SIZE
-           INTO WS-CUST-ID.
+           STRING WS-CUST-PREFIX WS-CUST-FN-CHARS WS-CUST-LN-CHARS
+                  WS-CUST-AREA-4 WS-CUST-RAND-3
+                  DELIMITED BY SIZE
+                  INTO WS-CUST-ID
 
            PERFORM 2400-WRITE-VSAM.
 
