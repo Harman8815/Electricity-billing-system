@@ -4,16 +4,29 @@
        ENVIRONMENT DIVISION.
 
        DATA DIVISION.
-       01 WS-MSG                PIC X(40).
        WORKING-STORAGE SECTION.
            COPY DFHBMSCA.
            COPY DFHAID.
            COPY EB05MSD.
 
+       01 WS-CICS-RESPONSE-CODES.
+          05 DFHRESP-NORMAL        PIC S9(08) COMP VALUE 0.
+          05 DFHRESP-NOTFND        PIC S9(08) COMP VALUE +13.
+          05 DFHRESP-LENGERR       PIC S9(08) COMP VALUE +16.
+          05 DFHRESP-IOERR         PIC S9(08) COMP VALUE +18.
+          05 DFHRESP-NOTOPEN       PIC S9(08) COMP VALUE +19.
+          05 DFHRESP-ENOTFND       PIC S9(08) COMP VALUE +20.
+          05 DFHRESP-ILLLOG        PIC S9(08) COMP VALUE +28.
+          05 DFHRESP-TERMERR       PIC S9(08) COMP VALUE +32.
+          05 DFHRESP-DUPKEY        PIC S9(08) COMP VALUE +33.
+          05 DFHRESP-DUPREC        PIC S9(08) COMP VALUE +34.
+
        01 WS-COMMAREA.
-          05 WS-STAGE            PIC X VALUE '1'.  *> '1'=MAP1, '2'=MAP2
+          05 WS-STAGE            PIC X VALUE '1'.
 
        01 WS-RESP-CODE           PIC S9(08) COMP.
+       01 WS-RESP-DISPLAY-CODE  PIC 9(08) DISPLAY.
+       01 WS-MSG                 PIC X(40).
 
        01 WS-CUST-ID             PIC X(12).
 
@@ -44,27 +57,28 @@
 
            IF EIBCALEN = 0
                MOVE '1' TO WS-STAGE
-               PERFORM 2000-SEND-MAP1
+               PERFORM 2000-SEND-MAP
            ELSE
                MOVE DFHCOMMAREA(1:1) TO WS-STAGE
 
                IF WS-STAGE = '1'
-                   PERFORM 3000-RECEIVE-MAP1
+                   PERFORM 3000-RECEIVE-MAP
                    PERFORM 4000-READ-VSAM
                ELSE
-                   PERFORM 3100-RECEIVE-MAP2
+                   PERFORM 3100-RECEIVE-MAP
                    PERFORM 5000-PROCESS-UPDATE
                END-IF
            END-IF.
 
-       2000-SEND-MAP1.
+       2000-SEND-MAP.
 
-           MOVE LOW-VALUES TO EB05MAP1O
+           MOVE LOW-VALUES TO EB05MAPO
            MOVE -1 TO CIDL
 
-           EXEC CICS SEND MAP('EB05MAP1')
+           EXEC CICS SEND MAP('EB05MAP')
                 MAPSET('EB05MSD')
-                FROM(EB05MAP1O)
+                FROM(EB05MAPO)
+                RESP(WS-RESP-CODE)
                 ERASE CURSOR
            END-EXEC
 
@@ -76,25 +90,31 @@
                 LENGTH(1)
            END-EXEC.
 
-       2100-SEND-MAP2.
+       2100-SEND-MAP.
 
-           MOVE LOW-VALUES TO EB05MAP2O
+           MOVE LOW-VALUES TO EB05MAPO
 
-           MOVE FIRST-NAME TO FN-OLDO
-           MOVE LAST-NAME  TO LN-OLDO
-           MOVE AREA-CODE  TO AR-OLDO
-           MOVE ADDRESS    TO AD-OLDO
-           MOVE CITY       TO CT-OLDO
-           MOVE UNITS      TO UN-OLDO
+           MOVE FIRST-NAME TO FN-OLD
+           MOVE LAST-NAME  TO LN-OLD
+           MOVE AREA-CODE  TO AREA-OLD
+           MOVE ADDRESS    TO ADDR-OLD
+           MOVE CITY       TO CITY-OLD
+           MOVE UNITS      TO UNIT-OLD
 
            MOVE -1 TO FN-NEWL
 
-           EXEC CICS SEND MAP('EB05MAP2')
+           EXEC CICS SEND MAP('EB05MAP')
                 MAPSET('EB05MSD')
-                FROM(EB05MAP2O)
+                FROM(EB05MAPO)
+                RESP(WS-RESP-CODE)
                 ERASE CURSOR
            END-EXEC
-
+           EVALUATE WS-RESP-CODE
+               WHEN DFHRESP-NORMAL
+                   CONTINUE
+               WHEN OTHER
+                   MOVE 'SEND MAP ERROR' TO MSGTXT
+           END-EVALUATE.
            MOVE '2' TO WS-STAGE
 
            EXEC CICS RETURN
@@ -103,51 +123,74 @@
                 LENGTH(1)
            END-EXEC.
 
-       3000-RECEIVE-MAP1.
+       3000-RECEIVE-MAP.
 
-           EXEC CICS RECEIVE MAP('EB05MAP1')
+           EXEC CICS RECEIVE MAP('EB05MAP')
                 MAPSET('EB05MSD')
-                INTO(EB05MAP1I)
+                INTO(EB05MAPI)
+                RESP(WS-RESP-CODE)
            END-EXEC
-
+           EVALUATE WS-RESP-CODE
+               WHEN DFHRESP-NORMAL
+                   CONTINUE
+               WHEN OTHER
+                   MOVE 'RECEIVE MAP ERROR' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
+           END-EVALUATE.
            MOVE CIDI TO WS-CUST-ID
 
            IF WS-CUST-ID = SPACES
-               MOVE 'ENTER CUSTOMER ID' TO MSG1O
-               PERFORM 2000-SEND-MAP1
+               MOVE 'ENTER CUSTOMER ID' TO MSGTXT
+               PERFORM 2000-SEND-MAP
            END-IF.
 
-       3100-RECEIVE-MAP2.
+       3100-RECEIVE-MAP.
 
-           EXEC CICS RECEIVE MAP('EB05MAP2')
+           EXEC CICS RECEIVE MAP('EB05MAP')
                 MAPSET('EB05MSD')
-                INTO(EB05MAP2I)
+                INTO(EB05MAPI)
+                RESP(WS-RESP-CODE)
            END-EXEC
+           EVALUATE WS-RESP-CODE
+               WHEN DFHRESP-NORMAL
+                   CONTINUE
+               WHEN OTHER
+                   MOVE 'RECEIVE MAP ERROR' TO MSGTXT
+           END-EVALUATE.
 
            MOVE FN-NEWI TO WS-NFN
            MOVE LN-NEWI TO WS-NLN
-           MOVE AR-NEWI TO WS-NAR
-           MOVE AD-NEWI TO WS-NAD
-           MOVE CT-NEWI TO WS-NCT.
+           MOVE AREA-NEWI TO WS-NAR
+           MOVE ADDR-NEWI TO WS-NAD
+           MOVE CITY-NEWI TO WS-NCT.
 
        4000-READ-VSAM.
 
            EXEC CICS READ
-                DATASET('OZA266.ELE.CUST.KSDS.FILE')
+                DATASET('CU01KSDS')
                 RIDFLD(WS-CUST-ID)
                 INTO(WS-CUST-REC)
                 RESP(WS-RESP-CODE)
            END-EXEC
 
            EVALUATE WS-RESP-CODE
-               WHEN DFHRESP(NORMAL)
-                   PERFORM 2100-SEND-MAP2
-               WHEN DFHRESP(NOTFND)
-                   MOVE 'CUSTOMER NOT FOUND' TO MSG1O
-                   PERFORM 2000-SEND-MAP1
+               WHEN DFHRESP-NORMAL
+                   PERFORM 2100-SEND-MAP
+               WHEN DFHRESP-NOTFND
+                   MOVE 'CUSTOMER NOT FOUND' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
+               WHEN DFHRESP-LENGERR
+                   MOVE 'RECORD LENGTH ERROR' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
+               WHEN DFHRESP-IOERR
+                   MOVE 'I/O ERROR - TRY AGAIN' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
+               WHEN DFHRESP-NOTOPEN
+                   MOVE 'DATASET NOT OPEN' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
                WHEN OTHER
-                   MOVE 'ERROR READING RECORD' TO MSG1O
-                   PERFORM 2000-SEND-MAP1
+                   MOVE 'ERROR READING RECORD' TO MSGTXT
+                   PERFORM 2000-SEND-MAP
            END-EVALUATE.
 
        5000-PROCESS-UPDATE.
@@ -177,29 +220,45 @@
        6000-REWRITE-VSAM.
 
            EXEC CICS REWRITE
-                DATASET('OZA266.ELE.CUST.KSDS.FILE')
+                DATASET('CU01KSDS')
                 FROM(WS-CUST-REC)
                 RESP(WS-RESP-CODE)
            END-EXEC
-
-           IF WS-RESP-CODE = DFHRESP(NORMAL)
-               MOVE 'RECORD UPDATED SUCCESSFULLY' TO MSG2O
-           ELSE
-               MOVE 'ERROR UPDATING RECORD' TO MSG2O
-           END-IF
-
-           PERFORM 2100-SEND-MAP2.
+           EVALUATE WS-RESP-CODE
+               WHEN DFHRESP-NORMAL
+                   MOVE 'RECORD UPDATED SUCCESSFULLY' TO MSGTXT
+               WHEN DFHRESP-NOTFND
+                   MOVE 'RECORD NOT FOUND FOR UPDATE' TO MSGTXT
+               WHEN DFHRESP-LENGERR
+                   MOVE 'RECORD LENGTH ERROR' TO MSGTXT
+               WHEN DFHRESP-IOERR
+                   MOVE 'I/O ERROR - TRY AGAIN' TO MSGTXT
+               WHEN DFHRESP-DUPKEY
+                   MOVE 'DUPLICATE KEY ERROR' TO MSGTXT
+               WHEN DFHRESP-DUPREC
+                   MOVE 'DUPLICATE RECORD ERROR' TO MSGTXT
+               WHEN OTHER
+                   MOVE 'ERROR UPDATING RECORD' TO MSGTXT
+           END-EVALUATE
+           PERFORM 2100-SEND-MAP.
 
        9000-TERMINATE.
-
            MOVE 'PRESS CTRL + BREAK TO EXIT' TO WS-MSG.
            EXEC CICS SEND TEXT
                            FROM(WS-MSG)
+                           LENGTH(LENGTH OF WS-MSG)
                            RESP(WS-RESP-CODE)
                            ERASE
            END-EXEC.
-           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
-               EXEC CICS RETURN END-EXEC
-           END-IF.
+           EVALUATE WS-RESP-CODE
+               WHEN DFHRESP-NORMAL
+                   EXEC CICS RETURN END-EXEC
+               WHEN OTHER
+                   MOVE WS-RESP-CODE TO WS-RESP-DISPLAY-CODE
+                   STRING 'SEND TEXT ERROR - CODE: ' DELIMITED BY SIZE
+                           WS-RESP-DISPLAY-CODE DELIMITED BY SIZE
+                          INTO WS-MSG
+                   EXEC CICS RETURN END-EXEC
+           END-EVALUATE.
 
 
