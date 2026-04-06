@@ -1,0 +1,73 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. MTRRD003.
+
+       DATA DIVISION.
+
+       WORKING-STORAGE SECTION.
+
+       EXEC SQL INCLUDE SQLCA END-EXEC.
+
+       01 WS-RESP-CODE   PIC S9(8) COMP.
+       01 WS-ID          PIC X(12)
+       01 WS-METER-REC.
+         05 WS-CUSTID    PIC X(14).
+         05 WS-MTRID     PIC X(12).
+         05 WS-PREVREAD  PIC X(6).
+         05 WS-CURRREAD  PIC X(6).
+
+       COPY MTR03MSD.
+
+       PROCEDURE DIVISION.
+
+           IF EIBCALEN = 0
+             PERFORM 1000-SEND-SCREEN
+           ELSE
+             PERFORM 2000-RECEIVE-SCREEN
+             PERFORM 3000-PROCESS-DATA
+           END-IF
+
+       EXEC CICS RETURN END-EXEC.
+
+       1000-SEND-SCREEN.
+           MOVE SPACES TO MSGTXTO
+           EXEC CICS SEND MAP('MTR03MSD')
+                          MAPSET('MTR03MSD') ERASE END-EXEC.
+
+       2000-RECEIVE-SCREEN.
+           EXEC CICS RECEIVE MAP('MTR03MSD')
+                          MAPSET('MTR03MSD') END-EXEC.
+
+       3000-PROCESS-DATA.
+
+           MOVE METID TO WS-ID
+
+           EXEC SQL
+             SELECT CUSTID,MTRID,PREVREAD,CURRREAD
+             INTO :WS-CUSTID,:WS-MTRID,:WS-PREVREAD,:WS-CURRREAD
+             FROM POMS_METER
+             WHERE ID=:WS-ID
+           END-EXEC
+
+           IF SQLCODE = 0
+             MOVE WS-CUSTID         TO CUSTIDO
+             MOVE WS-MTRID          TO MTRIDO
+             MOVE WS-PREVREAD       TO PREVREADO
+             MOVE WS-CURRREAD       TO CURRREADO
+             MOVE 'RECORD FOUND'    TO MSGTXTO
+           ELSE
+             MOVE 'METER NOT FOUND' TO MSGTXTO
+           END-IF
+
+           PERFORM 1000-SEND-SCREEN.
+       9000-TERMINATE.
+
+           MOVE 'PRESS CTRL + BREAK TO EXIT' TO MSGTXTO.
+           EXEC CICS SEND TEXT
+                           FROM(MSGTXTO)
+                           RESP(WS-RESP-CODE)
+                           ERASE
+           END-EXEC.
+           IF WS-RESP-CODE IS EQUAL TO DFHRESP(NORMAL)
+               EXEC CICS RETURN END-EXEC
+           END-IF.
+
