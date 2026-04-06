@@ -1,69 +1,33 @@
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. METCRE
+MTR03MSD DFHMSD TYPE=&SYSPARM,                                         X
+               LANG=COBOL,                                             X
+               MODE=INOUT,                                             X
+               TIOAPFX=YES,                                            X
+               STORAGE=AUTO
+METREDM  DFHMDI SIZE=(24,80)
+TITLE01  DFHMDF POS=(2,25),                                            X
+               LENGTH=30,                                              X
+               ATTRB=(PROT),                                           X
+               INITIAL='***METER READ***'
+METID     DFHMDF POS=(5,22),                                           X
+               INITIAL='METER ID:',                                    X
+               LENGTH=12,                                              X
+               ATTRB=(UNPROT,IC)
+CUSTID  DFHMDF POS=(7,30),                                             X
+               LENGTH=12,                                              X
+               ATTRB=PROT
+MTRID   DFHMDF POS=(8,30),                                             X
+               LENGTH=12,                                              X
+               ATTRB=PROT
+PREVREAD  DFHMDF POS=(9,30),                                           X
+               LENGTH=6,                                               X
+               ATTRB=PROT
+CURRREAD DFHMDF POS=(10,30),                                           X
+               LENGTH=6,                                               X
+               ATTRB=PROT
+MSGTXT   DFHMDF POS=(15,10),                                           X
+               LENGTH=50,                                              X
+               ATTRB=(PROT)
 
-       DATA DIVISION.
-
-       WORKING-STORAGE SECTION.
-
-       01 WS-RESP PIC S9(8) COMP.
-       01 WS-MID  PIC X(20).
-
-       01 WS-METER-REC.
-           05 WS-ID     PIC X(20).
-           05 WS-FNAME  PIC X(15).
-           05 WS-LNAME  PIC X(15).
-           05 WS-AREA   PIC X(5).
-           05 WS-ADDR   PIC X(20).
-           05 WS-CITY   PIC X(15).
-           05 WS-UNITS  PIC 9(5).
-
-       COPY METMAP.
-
-       PROCEDURE DIVISION.
-
-           IF EIBCALEN = 0
-               PERFORM SEND-SCREEN
-           ELSE
-               PERFORM RECEIVE-SCREEN
-               PERFORM PROCESS-DATA
-           END-IF
-
-           EXEC CICS RETURN END-EXEC.
-
-       SEND-SCREEN.
-           MOVE SPACES TO MSGFO MIDFO
-           EXEC CICS SEND MAP('METMAP')
-           MAPSET('METMAP') ERASE END-EXEC.
-
-       RECEIVE-SCREEN.
-           EXEC CICS RECEIVE MAP('METMAP')
-           MAPSET('METMAP') END-EXEC.
-
-       PROCESS-DATA.
-
-           MOVE FNAMEFI TO WS-FNAME
-           MOVE LNAMEFI TO WS-LNAME
-           MOVE AREAFI  TO WS-AREA
-           MOVE ADDRFI  TO WS-ADDR
-           MOVE CITYFI  TO WS-CITY
-
-           MOVE FUNCTION CURRENT-DATE(1:14) TO WS-MID
-           MOVE WS-MID TO WS-ID
-           MOVE 0 TO WS-UNITS
-
-           EXEC CICS WRITE
-                FILE('METERKSDS')
-                FROM(WS-METER-REC)
-                RIDFLD(WS-ID)
-                RESP(WS-RESP)
-           END-EXEC
-
-           IF WS-RESP = DFHRESP(NORMAL)
-                MOVE WS-MID TO MIDFO
-                MOVE 'METER CREATED SUCCESSFULLY' TO MSGFO
-           ELSE
-                MOVE 'ERROR WRITING RECORD' TO MSGFO
-           END-IF
-
-           PERFORM SEND-SCREEN.
+         DFHMSD TYPE=FINAL
+               END
 
